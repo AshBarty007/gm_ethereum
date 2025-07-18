@@ -17,6 +17,7 @@
 package keystore
 
 import (
+	"github.com/ethereum/go-ethereum/gmsm"
 	"math/rand"
 	"os"
 	"runtime"
@@ -29,7 +30,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/event"
 )
 
@@ -337,7 +337,7 @@ func TestWalletNotifications(t *testing.T) {
 // TestImportExport tests the import functionality of a keystore.
 func TestImportECDSA(t *testing.T) {
 	_, ks := tmpKeyStore(t, true)
-	key, err := crypto.GenerateKey()
+	key, err := gmsm.GenerateKey()
 	if err != nil {
 		t.Fatalf("failed to generate key: %v", key)
 	}

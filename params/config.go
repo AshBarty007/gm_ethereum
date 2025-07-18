@@ -19,10 +19,10 @@ package params
 import (
 	"encoding/binary"
 	"fmt"
+	"github.com/ethereum/go-ethereum/gmsm/sm3"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
-	"golang.org/x/crypto/sha3"
 )
 
 // Genesis hashes to enforce below configs on.
@@ -315,7 +315,7 @@ func (c *TrustedCheckpoint) Hash() common.Hash {
 	var sectionIndex [8]byte
 	binary.BigEndian.PutUint64(sectionIndex[:], c.SectionIndex)
 
-	w := sha3.NewLegacyKeccak256()
+	w := sm3.New()
 	w.Write(sectionIndex[:])
 	w.Write(c.SectionHead[:])
 	w.Write(c.CHTRoot[:])

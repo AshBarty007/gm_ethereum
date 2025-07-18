@@ -18,9 +18,9 @@ package main
 
 import (
 	"fmt"
+	"github.com/ethereum/go-ethereum/gmsm"
 	"net"
 
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/urfave/cli/v2"
 )
@@ -73,11 +73,11 @@ func genkey(ctx *cli.Context) error {
 	}
 	file := ctx.Args().Get(0)
 
-	key, err := crypto.GenerateKey()
+	key, err := gmsm.GenerateKey()
 	if err != nil {
 		return fmt.Errorf("could not generate key: %v", err)
 	}
-	return crypto.SaveECDSA(file, key)
+	return gmsm.SaveSM2(file, key)
 }
 
 func keyToURL(ctx *cli.Context) error {
@@ -91,7 +91,7 @@ func keyToURL(ctx *cli.Context) error {
 		tcp  = ctx.Int(tcpPortFlag.Name)
 		udp  = ctx.Int(udpPortFlag.Name)
 	)
-	key, err := crypto.LoadECDSA(file)
+	key, err := gmsm.LoadSM2(file)
 	if err != nil {
 		return err
 	}

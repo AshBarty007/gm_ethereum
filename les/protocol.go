@@ -17,15 +17,15 @@
 package les
 
 import (
-	"crypto/ecdsa"
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/gmsm"
+	"github.com/ethereum/go-ethereum/gmsm/sm2"
 	"io"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
 	vfc "github.com/ethereum/go-ethereum/les/vflux/client"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/rlp"
@@ -257,9 +257,9 @@ func (a *announceData) sanityCheck() error {
 }
 
 // sign adds a signature to the block announcement by the given privKey
-func (a *announceData) sign(privKey *ecdsa.PrivateKey) {
+func (a *announceData) sign(privKey *sm2.PrivateKey) {
 	rlp, _ := rlp.EncodeToBytes(blockInfo{a.Hash, a.Number, a.Td})
-	sig, _ := crypto.Sign(crypto.Keccak256(rlp), privKey)
+	sig, _ := gmsm.Sign(gmsm.SM3(rlp), privKey)
 	a.Update = a.Update.add("sign", sig)
 }
 
@@ -270,7 +270,7 @@ func (a *announceData) checkSignature(id enode.ID, update keyValueMap) error {
 		return err
 	}
 	rlp, _ := rlp.EncodeToBytes(blockInfo{a.Hash, a.Number, a.Td})
-	recPubkey, err := crypto.SigToPub(crypto.Keccak256(rlp), sig)
+	recPubkey, err := gmsm.SigToPub(gmsm.SM3(rlp), sig)
 	if err != nil {
 		return err
 	}

@@ -20,16 +20,16 @@ import (
 	"bytes"
 	"container/list"
 	"context"
-	"crypto/ecdsa"
 	crand "crypto/rand"
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/gmsm"
+	"github.com/ethereum/go-ethereum/gmsm/sm2"
 	"io"
 	"net"
 	"sync"
 	"time"
 
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/p2p/discover/v4wire"
 	"github.com/ethereum/go-ethereum/p2p/enode"
@@ -68,7 +68,7 @@ type UDPv4 struct {
 	conn        UDPConn
 	log         log.Logger
 	netrestrict *netutil.Netlist
-	priv        *ecdsa.PrivateKey
+	priv        *sm2.PrivateKey
 	localNode   *enode.LocalNode
 	db          *enode.DB
 	tab         *Table
@@ -185,11 +185,11 @@ func (t *UDPv4) Resolve(n *enode.Node) *enode.Node {
 		}
 	}
 	// Otherwise perform a network lookup.
-	var key enode.Secp256k1
+	var key enode.Sm2p256v1
 	if n.Load(&key) != nil {
 		return n // no secp256k1 key
 	}
-	result := t.LookupPubkey((*ecdsa.PublicKey)(&key))
+	result := t.LookupPubkey((*sm2.PublicKey)(&key))
 	for _, rn := range result {
 		if rn.ID() == n.ID() {
 			if rn, err := t.RequestENR(rn); err == nil {
@@ -257,7 +257,7 @@ func (t *UDPv4) makePing(toaddr *net.UDPAddr) *v4wire.Ping {
 }
 
 // LookupPubkey finds the closest nodes to the given public key.
-func (t *UDPv4) LookupPubkey(key *ecdsa.PublicKey) []*enode.Node {
+func (t *UDPv4) LookupPubkey(key *sm2.PublicKey) []*enode.Node {
 	if t.tab.len() == 0 {
 		// All nodes were dropped, refresh. The very first query will hit this
 		// case and run the bootstrapping logic.
@@ -288,7 +288,7 @@ func (t *UDPv4) newRandomLookup(ctx context.Context) *lookup {
 }
 
 func (t *UDPv4) newLookup(ctx context.Context, targetKey encPubkey) *lookup {
-	target := enode.ID(crypto.Keccak256Hash(targetKey[:]))
+	target := enode.ID(gmsm.SM3Hash(targetKey[:]))
 	ekey := v4wire.Pubkey(targetKey)
 	it := newLookup(ctx, t.tab, target, func(n *node) ([]*node, error) {
 		return t.findnode(n.ID(), n.addr(), ekey)
@@ -585,7 +585,7 @@ func (t *UDPv4) nodeFromRPC(sender *net.UDPAddr, rn v4wire.Node) (*node, error) 
 	if t.netrestrict != nil && !t.netrestrict.Contains(rn.IP) {
 		return nil, errors.New("not contained in netrestrict list")
 	}
-	key, err := v4wire.DecodePubkey(crypto.S256(), rn.ID)
+	key, err := v4wire.DecodePubkey(gmsm.P256Sm2(), rn.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -595,9 +595,9 @@ func (t *UDPv4) nodeFromRPC(sender *net.UDPAddr, rn v4wire.Node) (*node, error) 
 }
 
 func nodeToRPC(n *node) v4wire.Node {
-	var key ecdsa.PublicKey
+	var key sm2.PublicKey
 	var ekey v4wire.Pubkey
-	if err := n.Load((*enode.Secp256k1)(&key)); err == nil {
+	if err := n.Load((*enode.Sm2p256v1)(&key)); err == nil {
 		ekey = v4wire.EncodePubkey(&key)
 	}
 	return v4wire.Node{ID: ekey, IP: n.IP(), UDP: uint16(n.UDP()), TCP: uint16(n.TCP())}
@@ -630,7 +630,7 @@ func (t *UDPv4) wrapPacket(p v4wire.Packet) *packetHandlerV4 {
 // packetHandlerV4 wraps a packet with handler functions.
 type packetHandlerV4 struct {
 	v4wire.Packet
-	senderKey *ecdsa.PublicKey // used for ping
+	senderKey *sm2.PublicKey // used for ping
 
 	// preverify checks whether the packet is valid and should be handled at all.
 	preverify func(p *packetHandlerV4, from *net.UDPAddr, fromID enode.ID, fromKey v4wire.Pubkey) error
@@ -643,7 +643,7 @@ type packetHandlerV4 struct {
 func (t *UDPv4) verifyPing(h *packetHandlerV4, from *net.UDPAddr, fromID enode.ID, fromKey v4wire.Pubkey) error {
 	req := h.Packet.(*v4wire.Ping)
 
-	senderKey, err := v4wire.DecodePubkey(crypto.S256(), fromKey)
+	senderKey, err := v4wire.DecodePubkey(gmsm.P256Sm2(), fromKey)
 	if err != nil {
 		return err
 	}
@@ -720,7 +720,7 @@ func (t *UDPv4) handleFindnode(h *packetHandlerV4, from *net.UDPAddr, fromID eno
 	req := h.Packet.(*v4wire.Findnode)
 
 	// Determine closest nodes.
-	target := enode.ID(crypto.Keccak256Hash(req.Target[:]))
+	target := enode.ID(gmsm.SM3Hash(req.Target[:]))
 	closest := t.tab.findnodeByID(target, bucketSize, true).entries
 
 	// Send neighbors in chunks with at most maxNeighbors per packet

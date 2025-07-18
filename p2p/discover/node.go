@@ -17,15 +17,15 @@
 package discover
 
 import (
-	"crypto/ecdsa"
 	"crypto/elliptic"
 	"errors"
+	"github.com/ethereum/go-ethereum/gmsm"
+	"github.com/ethereum/go-ethereum/gmsm/sm2"
 	"math/big"
 	"net"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common/math"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 )
 
@@ -39,18 +39,18 @@ type node struct {
 
 type encPubkey [64]byte
 
-func encodePubkey(key *ecdsa.PublicKey) encPubkey {
+func encodePubkey(key *sm2.PublicKey) encPubkey {
 	var e encPubkey
 	math.ReadBits(key.X, e[:len(e)/2])
 	math.ReadBits(key.Y, e[len(e)/2:])
 	return e
 }
 
-func decodePubkey(curve elliptic.Curve, e []byte) (*ecdsa.PublicKey, error) {
+func decodePubkey(curve elliptic.Curve, e []byte) (*sm2.PublicKey, error) {
 	if len(e) != len(encPubkey{}) {
 		return nil, errors.New("wrong size public key data")
 	}
-	p := &ecdsa.PublicKey{Curve: curve, X: new(big.Int), Y: new(big.Int)}
+	p := &sm2.PublicKey{Curve: curve, X: new(big.Int), Y: new(big.Int)}
 	half := len(e) / 2
 	p.X.SetBytes(e[:half])
 	p.Y.SetBytes(e[half:])
@@ -61,7 +61,7 @@ func decodePubkey(curve elliptic.Curve, e []byte) (*ecdsa.PublicKey, error) {
 }
 
 func (e encPubkey) id() enode.ID {
-	return enode.ID(crypto.Keccak256Hash(e[:]))
+	return enode.ID(gmsm.SM3Hash(e[:]))
 }
 
 func wrapNode(n *enode.Node) *node {

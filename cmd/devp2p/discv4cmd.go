@@ -18,13 +18,13 @@ package main
 
 import (
 	"fmt"
+	"github.com/ethereum/go-ethereum/gmsm"
 	"net"
 	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/cmd/devp2p/internal/v4test"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/internal/flags"
 	"github.com/ethereum/go-ethereum/p2p/discover"
 	"github.com/ethereum/go-ethereum/p2p/enode"
@@ -240,13 +240,13 @@ func makeDiscoveryConfig(ctx *cli.Context) (*enode.LocalNode, discover.Config) {
 	var cfg discover.Config
 
 	if ctx.IsSet(nodekeyFlag.Name) {
-		key, err := crypto.HexToECDSA(ctx.String(nodekeyFlag.Name))
+		key, err := gmsm.HexToSM2(ctx.String(nodekeyFlag.Name))
 		if err != nil {
 			exit(fmt.Errorf("-%s: %v", nodekeyFlag.Name, err))
 		}
 		cfg.PrivateKey = key
 	} else {
-		cfg.PrivateKey, _ = crypto.GenerateKey()
+		cfg.PrivateKey, _ = gmsm.GenerateKey()
 	}
 
 	if commandHasFlag(ctx, bootnodesFlag) {

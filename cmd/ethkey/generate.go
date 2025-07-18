@@ -17,14 +17,14 @@
 package main
 
 import (
-	"crypto/ecdsa"
 	"fmt"
+	"github.com/ethereum/go-ethereum/gmsm"
+	"github.com/ethereum/go-ethereum/gmsm/sm2"
 	"os"
 	"path/filepath"
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/cmd/utils"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/google/uuid"
 	"github.com/urfave/cli/v2"
 )
@@ -73,17 +73,17 @@ If you want to encrypt an existing private key, it can be specified by setting
 			utils.Fatalf("Error checking if keyfile exists: %v", err)
 		}
 
-		var privateKey *ecdsa.PrivateKey
+		var privateKey *sm2.PrivateKey
 		var err error
 		if file := ctx.String(privateKeyFlag.Name); file != "" {
 			// Load private key from file.
-			privateKey, err = crypto.LoadECDSA(file)
+			privateKey, err = gmsm.LoadSM2(file)
 			if err != nil {
 				utils.Fatalf("Can't load private key: %v", err)
 			}
 		} else {
 			// If not loaded, generate random.
-			privateKey, err = crypto.GenerateKey()
+			privateKey, err = gmsm.GenerateKey()
 			if err != nil {
 				utils.Fatalf("Failed to generate random private key: %v", err)
 			}
@@ -96,7 +96,7 @@ If you want to encrypt an existing private key, it can be specified by setting
 		}
 		key := &keystore.Key{
 			Id:         UUID,
-			Address:    crypto.PubkeyToAddress(privateKey.PublicKey),
+			Address:    gmsm.PubkeyToAddress(privateKey.PublicKey),
 			PrivateKey: privateKey,
 		}
 

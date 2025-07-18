@@ -17,8 +17,8 @@
 package ethtest
 
 import (
-	"crypto/ecdsa"
 	"fmt"
+	"github.com/ethereum/go-ethereum/gmsm/sm2"
 	"time"
 
 	"github.com/ethereum/go-ethereum/eth/protocols/eth"
@@ -145,7 +145,7 @@ func (msg PooledTransactions) ReqID() uint64 { return msg.RequestId }
 // Conn represents an individual connection with a peer
 type Conn struct {
 	*rlpx.Conn
-	ourKey                     *ecdsa.PrivateKey
+	ourKey                     *sm2.PrivateKey
 	negotiatedProtoVersion     uint
 	negotiatedSnapProtoVersion uint
 	ourHighestProtoVersion     uint

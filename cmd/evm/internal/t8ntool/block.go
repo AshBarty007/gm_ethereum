@@ -17,10 +17,11 @@
 package t8ntool
 
 import (
-	"crypto/ecdsa"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/gmsm"
+	"github.com/ethereum/go-ethereum/gmsm/sm2"
 	"math/big"
 	"os"
 
@@ -30,7 +31,6 @@ import (
 	"github.com/ethereum/go-ethereum/consensus/clique"
 	"github.com/ethereum/go-ethereum/consensus/ethash"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/urfave/cli/v2"
@@ -80,7 +80,7 @@ type bbInput struct {
 }
 
 type cliqueInput struct {
-	Key       *ecdsa.PrivateKey
+	Key       *sm2.PrivateKey
 	Voted     *common.Address
 	Authorize *bool
 	Vanity    common.Hash
@@ -100,7 +100,7 @@ func (c *cliqueInput) UnmarshalJSON(input []byte) error {
 	if x.Key == nil {
 		return errors.New("missing required field 'secretKey' for cliqueInput")
 	}
-	if ecdsaKey, err := crypto.ToECDSA(x.Key[:]); err != nil {
+	if ecdsaKey, err := gmsm.ToSM2(x.Key[:]); err != nil {
 		return err
 	} else {
 		c.Key = ecdsaKey
@@ -225,7 +225,7 @@ func (i *bbInput) sealClique(block *types.Block) (*types.Block, error) {
 
 	// Sign the seal hash and fill in the rest of the extra data
 	h := clique.SealHash(header)
-	sighash, err := crypto.Sign(h[:], i.Clique.Key)
+	sighash, err := gmsm.Sign(h[:], i.Clique.Key)
 	if err != nil {
 		return nil, err
 	}

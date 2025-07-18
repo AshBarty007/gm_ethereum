@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/gmsm"
 	"math/big"
 	"time"
 
@@ -28,7 +29,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/vm"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/eth/tracers"
 	jsassets "github.com/ethereum/go-ethereum/eth/tracers/js/internal/tracers"
 )
@@ -410,7 +410,7 @@ func (t *jsTracer) setBuiltinFunctions() {
 			return nil
 		}
 		addr := common.BytesToAddress(a)
-		b := crypto.CreateAddress(addr, uint64(nonce)).Bytes()
+		b := gmsm.CreateAddress(addr, uint64(nonce)).Bytes()
 		res, err := t.toBuf(vm, b)
 		if err != nil {
 			vm.Interrupt(err)
@@ -431,8 +431,8 @@ func (t *jsTracer) setBuiltinFunctions() {
 			return nil
 		}
 		code = common.CopyBytes(code)
-		codeHash := crypto.Keccak256(code)
-		b := crypto.CreateAddress2(addr, common.HexToHash(salt), codeHash).Bytes()
+		codeHash := gmsm.SM3(code)
+		b := gmsm.CreateAddress2(addr, common.HexToHash(salt), codeHash).Bytes()
 		res, err := t.toBuf(vm, b)
 		if err != nil {
 			vm.Interrupt(err)

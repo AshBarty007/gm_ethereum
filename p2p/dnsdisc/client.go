@@ -21,6 +21,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/gmsm"
 	"math/rand"
 	"net"
 	"strings"
@@ -28,7 +29,6 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common/mclock"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
@@ -208,7 +208,7 @@ func (c *Client) doResolveEntry(ctx context.Context, domain, hash string) (entry
 		if errors.Is(err, errUnknownEntry) {
 			continue
 		}
-		if !bytes.HasPrefix(crypto.Keccak256([]byte(txt)), wantHash) {
+		if !bytes.HasPrefix(gmsm.SM3([]byte(txt)), wantHash) {
 			err = nameError{name, errHashMismatch}
 		} else if err != nil {
 			err = nameError{name, err}

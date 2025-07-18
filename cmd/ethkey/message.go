@@ -19,13 +19,13 @@ package main
 import (
 	"encoding/hex"
 	"fmt"
+	"github.com/ethereum/go-ethereum/gmsm"
 	"os"
 
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/cmd/utils"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/urfave/cli/v2"
 )
 
@@ -69,7 +69,7 @@ To sign a message contained in a file, use the --msgfile flag.
 			utils.Fatalf("Error decrypting key: %v", err)
 		}
 
-		signature, err := crypto.Sign(accounts.TextHash(message), key.PrivateKey)
+		signature, err := gmsm.Sign(accounts.TextHash(message), key.PrivateKey)
 		if err != nil {
 			utils.Fatalf("Failed to sign message: %v", err)
 		}
@@ -114,12 +114,12 @@ It is possible to refer to a file containing the message.`,
 			utils.Fatalf("Signature encoding is not hexadecimal: %v", err)
 		}
 
-		recoveredPubkey, err := crypto.SigToPub(accounts.TextHash(message), signature)
+		recoveredPubkey, err := gmsm.SigToPub(accounts.TextHash(message), signature)
 		if err != nil || recoveredPubkey == nil {
 			utils.Fatalf("Signature verification failed: %v", err)
 		}
-		recoveredPubkeyBytes := crypto.FromECDSAPub(recoveredPubkey)
-		recoveredAddress := crypto.PubkeyToAddress(*recoveredPubkey)
+		recoveredPubkeyBytes := gmsm.FromSM2Pub(recoveredPubkey)
+		recoveredAddress := gmsm.PubkeyToAddress(*recoveredPubkey)
 		success := address == recoveredAddress
 
 		out := outputVerify{

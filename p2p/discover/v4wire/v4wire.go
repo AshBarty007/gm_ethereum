@@ -19,10 +19,11 @@ package v4wire
 
 import (
 	"bytes"
-	"crypto/ecdsa"
 	"crypto/elliptic"
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/gmsm"
+	"github.com/ethereum/go-ethereum/gmsm/sm2"
 	"math/big"
 	"net"
 	"time"
@@ -131,7 +132,7 @@ type Pubkey [64]byte
 
 // ID returns the node ID corresponding to the public key.
 func (e Pubkey) ID() enode.ID {
-	return enode.ID(crypto.Keccak256Hash(e[:]))
+	return enode.ID(gmsm.SM3Hash(e[:]))
 }
 
 // Node represents information about a node.
@@ -193,7 +194,7 @@ func Expired(ts uint64) bool {
 
 const (
 	macSize  = 32
-	sigSize  = crypto.SignatureLength
+	sigSize  = gmsm.SignatureLength
 	headSize = macSize + sigSize // space of packet frame data
 )
 
@@ -211,11 +212,11 @@ func Decode(input []byte) (Packet, Pubkey, []byte, error) {
 		return nil, Pubkey{}, nil, ErrPacketTooSmall
 	}
 	hash, sig, sigdata := input[:macSize], input[macSize:headSize], input[headSize:]
-	shouldhash := crypto.Keccak256(input[macSize:])
+	shouldhash := gmsm.SM3(input[macSize:])
 	if !bytes.Equal(hash, shouldhash) {
 		return nil, Pubkey{}, nil, ErrBadHash
 	}
-	fromKey, err := recoverNodeKey(crypto.Keccak256(input[headSize:]), sig)
+	fromKey, err := recoverNodeKey(gmsm.SM3(input[headSize:]), sig)
 	if err != nil {
 		return nil, fromKey, hash, err
 	}
@@ -243,7 +244,7 @@ func Decode(input []byte) (Packet, Pubkey, []byte, error) {
 }
 
 // Encode encodes a discovery packet.
-func Encode(priv *ecdsa.PrivateKey, req Packet) (packet, hash []byte, err error) {
+func Encode(priv *sm2.PrivateKey, req Packet) (packet, hash []byte, err error) {
 	b := new(bytes.Buffer)
 	b.Write(headSpace)
 	b.WriteByte(req.Kind())
@@ -251,13 +252,13 @@ func Encode(priv *ecdsa.PrivateKey, req Packet) (packet, hash []byte, err error)
 		return nil, nil, err
 	}
 	packet = b.Bytes()
-	sig, err := crypto.Sign(crypto.Keccak256(packet[headSize:]), priv)
+	sig, err := gmsm.Sign(gmsm.SM3(packet[headSize:]), priv)
 	if err != nil {
 		return nil, nil, err
 	}
 	copy(packet[macSize:], sig)
 	// Add the hash to the front. Note: this doesn't protect the packet in any way.
-	hash = crypto.Keccak256(packet[macSize:])
+	hash = gmsm.SM3(packet[macSize:])
 	copy(packet, hash)
 	return packet, hash, nil
 }
@@ -273,7 +274,7 @@ func recoverNodeKey(hash, sig []byte) (key Pubkey, err error) {
 }
 
 // EncodePubkey encodes a secp256k1 public key.
-func EncodePubkey(key *ecdsa.PublicKey) Pubkey {
+func EncodePubkey(key *sm2.PublicKey) Pubkey {
 	var e Pubkey
 	math.ReadBits(key.X, e[:len(e)/2])
 	math.ReadBits(key.Y, e[len(e)/2:])
@@ -281,8 +282,8 @@ func EncodePubkey(key *ecdsa.PublicKey) Pubkey {
 }
 
 // DecodePubkey reads an encoded secp256k1 public key.
-func DecodePubkey(curve elliptic.Curve, e Pubkey) (*ecdsa.PublicKey, error) {
-	p := &ecdsa.PublicKey{Curve: curve, X: new(big.Int), Y: new(big.Int)}
+func DecodePubkey(curve elliptic.Curve, e Pubkey) (*sm2.PublicKey, error) {
+	p := &sm2.PublicKey{Curve: curve, X: new(big.Int), Y: new(big.Int)}
 	half := len(e) / 2
 	p.X.SetBytes(e[:half])
 	p.Y.SetBytes(e[half:])

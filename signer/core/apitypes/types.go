@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/gmsm"
 	"math/big"
 	"reflect"
 	"regexp"
@@ -35,7 +36,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
 )
 
 var typedDataReferenceTypeRegexp = regexp.MustCompile(`^[A-Z](\w*)(\[\])?$`)
@@ -64,7 +64,7 @@ func (vs *ValidationMessages) Info(msg string) {
 	vs.Messages = append(vs.Messages, ValidationInfo{INFO, msg})
 }
 
-/// getWarnings returns an error with all messages of type WARN of above, or nil if no warnings were present
+// / getWarnings returns an error with all messages of type WARN of above, or nil if no warnings were present
 func (v *ValidationMessages) GetWarnings() error {
 	var messages []string
 	for _, msg := range v.Messages {
@@ -267,7 +267,7 @@ func TypedDataAndHash(typedData TypedData) ([]byte, string, error) {
 		return nil, "", err
 	}
 	rawData := fmt.Sprintf("\x19\x01%s%s", string(domainSeparator), string(typedDataHash))
-	return crypto.Keccak256([]byte(rawData)), rawData, nil
+	return gmsm.SM3([]byte(rawData)), rawData, nil
 }
 
 // HashStruct generates a keccak256 hash of the encoding of the provided data
@@ -276,7 +276,7 @@ func (typedData *TypedData) HashStruct(primaryType string, data TypedDataMessage
 	if err != nil {
 		return nil, err
 	}
-	return crypto.Keccak256(encodedData), nil
+	return gmsm.SM3(encodedData), nil
 }
 
 // Dependencies returns an array of custom types ordered by their hierarchical reference tree
@@ -340,7 +340,7 @@ func (typedData *TypedData) EncodeType(primaryType string) hexutil.Bytes {
 
 // TypeHash creates the keccak256 hash  of the data
 func (typedData *TypedData) TypeHash(primaryType string) hexutil.Bytes {
-	return crypto.Keccak256(typedData.EncodeType(primaryType))
+	return gmsm.SM3(typedData.EncodeType(primaryType))
 }
 
 // EncodeData generates the following encoding:
@@ -384,7 +384,7 @@ func (typedData *TypedData) EncodeData(primaryType string, data map[string]inter
 					if err != nil {
 						return nil, err
 					}
-					arrayBuffer.Write(crypto.Keccak256(encodedData))
+					arrayBuffer.Write(gmsm.SM3(encodedData))
 				} else {
 					bytesValue, err := typedData.EncodePrimitiveValue(parsedType, item, depth)
 					if err != nil {
@@ -394,7 +394,7 @@ func (typedData *TypedData) EncodeData(primaryType string, data map[string]inter
 				}
 			}
 
-			buffer.Write(crypto.Keccak256(arrayBuffer.Bytes()))
+			buffer.Write(gmsm.SM3(arrayBuffer.Bytes()))
 		} else if typedData.Types[field.Type] != nil {
 			mapValue, ok := encValue.(map[string]interface{})
 			if !ok {
@@ -404,7 +404,7 @@ func (typedData *TypedData) EncodeData(primaryType string, data map[string]inter
 			if err != nil {
 				return nil, err
 			}
-			buffer.Write(crypto.Keccak256(encodedData))
+			buffer.Write(gmsm.SM3(encodedData))
 		} else {
 			byteValue, err := typedData.EncodePrimitiveValue(encType, encValue, depth)
 			if err != nil {
@@ -511,13 +511,13 @@ func (typedData *TypedData) EncodePrimitiveValue(encType string, encValue interf
 		if !ok {
 			return nil, dataMismatchError(encType, encValue)
 		}
-		return crypto.Keccak256([]byte(strVal)), nil
+		return gmsm.SM3([]byte(strVal)), nil
 	case "bytes":
 		bytesValue, ok := parseBytes(encValue)
 		if !ok {
 			return nil, dataMismatchError(encType, encValue)
 		}
-		return crypto.Keccak256(bytesValue), nil
+		return gmsm.SM3(bytesValue), nil
 	}
 	if strings.HasPrefix(encType, "bytes") {
 		lengthStr := strings.TrimPrefix(encType, "bytes")

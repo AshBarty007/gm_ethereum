@@ -20,6 +20,7 @@ import (
 	"crypto/ecdsa"
 	"encoding/json"
 	"fmt"
+	"github.com/ethereum/go-ethereum/gmsm/sm2"
 	"os"
 	"path/filepath"
 	"time"
@@ -251,7 +252,7 @@ func dnsNukeRoute53(ctx *cli.Context) error {
 }
 
 // loadSigningKey loads a private key in Ethereum keystore format.
-func loadSigningKey(keyfile string) *ecdsa.PrivateKey {
+func loadSigningKey(keyfile string) *sm2.PrivateKey {
 	keyjson, err := os.ReadFile(keyfile)
 	if err != nil {
 		exit(fmt.Errorf("failed to read the keyfile at '%s': %v", keyfile, err))
@@ -361,7 +362,7 @@ func loadTreeDefinitionForExport(dir string) (domain string, t *dnsdisc.Tree, er
 
 // ensureValidTreeSignature checks that sig is valid for tree and assigns it as the
 // tree's signature if valid.
-func ensureValidTreeSignature(t *dnsdisc.Tree, pubkey *ecdsa.PublicKey, sig string) error {
+func ensureValidTreeSignature(t *dnsdisc.Tree, pubkey *sm2.PublicKey, sig string) error {
 	if sig == "" {
 		return fmt.Errorf("missing signature, run 'devp2p dns sign' first")
 	}

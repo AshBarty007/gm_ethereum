@@ -20,15 +20,15 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/gmsm"
+	"github.com/ethereum/go-ethereum/gmsm/sm3"
 	"math/rand"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/eth/protocols/snap"
 	"github.com/ethereum/go-ethereum/internal/utesting"
 	"github.com/ethereum/go-ethereum/light"
 	"github.com/ethereum/go-ethereum/trie"
-	"golang.org/x/crypto/sha3"
 )
 
 func (s *Suite) TestSnapStatus(t *utesting.T) {
@@ -599,7 +599,7 @@ func (s *Suite) snapGetByteCodes(t *utesting.T, tc *byteCodesTest) error {
 	// that the serving node is missing
 	var (
 		bytecodes = res.Codes
-		hasher    = sha3.NewLegacyKeccak256().(crypto.KeccakState)
+		hasher    = sm3.New().(gmsm.Sm3State)
 		hash      = make([]byte, 32)
 		codes     = make([][]byte, len(req.Hashes))
 	)
@@ -608,7 +608,8 @@ func (s *Suite) snapGetByteCodes(t *utesting.T, tc *byteCodesTest) error {
 		// Find the next hash that we've been served, leaving misses with nils
 		hasher.Reset()
 		hasher.Write(bytecodes[i])
-		hasher.Read(hash)
+		//hasher.Read(hash)
+		hash = hasher.Sum(nil)
 
 		for j < len(req.Hashes) && !bytes.Equal(hash, req.Hashes[j][:]) {
 			j++
@@ -659,7 +660,7 @@ func (s *Suite) snapGetTrieNodes(t *utesting.T, tc *trieNodesTest) error {
 
 	// Cross reference the requested trienodes with the response to find gaps
 	// that the serving node is missing
-	hasher := sha3.NewLegacyKeccak256().(crypto.KeccakState)
+	hasher := sm3.New().(gmsm.Sm3State)
 	hash := make([]byte, 32)
 	trienodes := res.Nodes
 	if got, want := len(trienodes), len(tc.expHashes); got != want {
@@ -668,7 +669,9 @@ func (s *Suite) snapGetTrieNodes(t *utesting.T, tc *trieNodesTest) error {
 	for i, trienode := range trienodes {
 		hasher.Reset()
 		hasher.Write(trienode)
-		hasher.Read(hash)
+		//hasher.Read(hash)
+		hash = hasher.Sum(nil)
+
 		if got, want := hash, tc.expHashes[i]; !bytes.Equal(got, want[:]) {
 			fmt.Printf("hash %d wrong, got %#x, want %#x\n", i, got, want)
 			err = fmt.Errorf("hash %d wrong, got %#x, want %#x", i, got, want)

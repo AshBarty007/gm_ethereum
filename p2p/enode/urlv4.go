@@ -17,17 +17,17 @@
 package enode
 
 import (
-	"crypto/ecdsa"
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/gmsm"
+	"github.com/ethereum/go-ethereum/gmsm/sm2"
 	"net"
 	"net/url"
 	"regexp"
 	"strconv"
 
 	"github.com/ethereum/go-ethereum/common/math"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/p2p/enr"
 )
 
@@ -54,8 +54,8 @@ func MustParseV4(rawurl string) *Node {
 //
 // For incomplete nodes, the designator must look like one of these
 //
-//    enode://<hex node id>
-//    <hex node id>
+//	enode://<hex node id>
+//	<hex node id>
 //
 // For complete nodes, the node ID is encoded in the username portion
 // of the URL, separated from the host by an @ sign. The hostname can
@@ -68,7 +68,7 @@ func MustParseV4(rawurl string) *Node {
 // a node with IP address 10.3.58.6, TCP listening port 30303
 // and UDP discovery port 30301.
 //
-//    enode://<hex node id>@10.3.58.6:30303?discport=30301
+//	enode://<hex node id>@10.3.58.6:30303?discport=30301
 func ParseV4(rawurl string) (*Node, error) {
 	if m := incompleteNodeURL.FindStringSubmatch(rawurl); m != nil {
 		id, err := parsePubkey(m[1])
@@ -82,7 +82,7 @@ func ParseV4(rawurl string) (*Node, error) {
 
 // NewV4 creates a node from discovery v4 node information. The record
 // contained in the node has a zero-length signature.
-func NewV4(pubkey *ecdsa.PublicKey, ip net.IP, tcp, udp int) *Node {
+func NewV4(pubkey *sm2.PublicKey, ip net.IP, tcp, udp int) *Node {
 	var r enr.Record
 	if len(ip) > 0 {
 		r.Set(enr.IP(ip))
@@ -109,7 +109,7 @@ func isNewV4(n *Node) bool {
 
 func parseComplete(rawurl string) (*Node, error) {
 	var (
-		id               *ecdsa.PublicKey
+		id               *sm2.PublicKey
 		tcpPort, udpPort uint64
 	)
 	u, err := url.Parse(rawurl)
@@ -155,7 +155,7 @@ func parseComplete(rawurl string) (*Node, error) {
 }
 
 // parsePubkey parses a hex-encoded secp256k1 public key.
-func parsePubkey(in string) (*ecdsa.PublicKey, error) {
+func parsePubkey(in string) (*sm2.PublicKey, error) {
 	b, err := hex.DecodeString(in)
 	if err != nil {
 		return nil, err
@@ -163,20 +163,20 @@ func parsePubkey(in string) (*ecdsa.PublicKey, error) {
 		return nil, fmt.Errorf("wrong length, want %d hex chars", 128)
 	}
 	b = append([]byte{0x4}, b...)
-	return crypto.UnmarshalPubkey(b)
+	return gmsm.UnmarshalPubkey(b)
 }
 
 func (n *Node) URLv4() string {
 	var (
 		scheme enr.ID
 		nodeid string
-		key    ecdsa.PublicKey
+		key    sm2.PublicKey
 	)
 	n.Load(&scheme)
-	n.Load((*Secp256k1)(&key))
+	n.Load((*Sm2p256v1)(&key))
 	switch {
-	case scheme == "v4" || key != ecdsa.PublicKey{}:
-		nodeid = fmt.Sprintf("%x", crypto.FromECDSAPub(&key)[1:])
+	case scheme == "v4" || key != sm2.PublicKey{}:
+		nodeid = fmt.Sprintf("%x", gmsm.FromSM2Pub(&key)[1:])
 	default:
 		nodeid = fmt.Sprintf("%s.%x", scheme, n.id[:])
 	}
@@ -195,9 +195,9 @@ func (n *Node) URLv4() string {
 }
 
 // PubkeyToIDV4 derives the v4 node address from the given public key.
-func PubkeyToIDV4(key *ecdsa.PublicKey) ID {
+func PubkeyToIDV4(key *sm2.PublicKey) ID {
 	e := make([]byte, 64)
 	math.ReadBits(key.X, e[:len(e)/2])
 	math.ReadBits(key.Y, e[len(e)/2:])
-	return ID(crypto.Keccak256Hash(e))
+	return ID(gmsm.SM3Hash(e))
 }

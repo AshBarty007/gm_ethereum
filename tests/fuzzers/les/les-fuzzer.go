@@ -19,6 +19,7 @@ package les
 import (
 	"bytes"
 	"encoding/binary"
+	"github.com/ethereum/go-ethereum/gmsm"
 	"io"
 	"math/big"
 
@@ -28,7 +29,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
-	"github.com/ethereum/go-ethereum/crypto"
 	l "github.com/ethereum/go-ethereum/les"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rlp"
@@ -36,8 +36,8 @@ import (
 )
 
 var (
-	bankKey, _ = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
-	bankAddr   = crypto.PubkeyToAddress(bankKey.PublicKey)
+	bankKey, _ = gmsm.HexToSM2("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
+	bankAddr   = gmsm.PubkeyToAddress(bankKey.PublicKey)
 	bankFunds  = new(big.Int).Mul(big.NewInt(100), big.NewInt(params.Ether))
 
 	testChainLen     = 256
@@ -71,13 +71,13 @@ func makechain() (bc *core.BlockChain, addrHashes, txHashes []common.Hash) {
 			nonce := uint64(i)
 			if i%4 == 0 {
 				tx, _ = types.SignTx(types.NewContractCreation(nonce, big.NewInt(0), 200000, big.NewInt(0), testContractCode), signer, bankKey)
-				addr = crypto.CreateAddress(bankAddr, nonce)
+				addr = gmsm.CreateAddress(bankAddr, nonce)
 			} else {
 				addr = common.BigToAddress(big.NewInt(int64(i)))
 				tx, _ = types.SignTx(types.NewTransaction(nonce, addr, big.NewInt(10000), params.TxGas, big.NewInt(params.GWei), nil), signer, bankKey)
 			}
 			gen.AddTx(tx)
-			addrHashes = append(addrHashes, crypto.Keccak256Hash(addr[:]))
+			addrHashes = append(addrHashes, gmsm.SM3Hash(addr[:]))
 			txHashes = append(txHashes, tx.Hash())
 		})
 	bc, _ = core.NewBlockChain(db, nil, gspec.Config, ethash.NewFaker(), vm.Config{}, nil, nil)

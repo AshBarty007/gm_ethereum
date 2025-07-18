@@ -21,6 +21,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/gmsm"
 	"io"
 	"math/big"
 	"math/rand"
@@ -161,7 +162,7 @@ func ecrecover(header *types.Header, sigcache *lru.ARCCache) (common.Address, er
 		return common.Address{}, err
 	}
 	var signer common.Address
-	copy(signer[:], crypto.Keccak256(pubkey[1:])[12:])
+	copy(signer[:], gmsm.SM3(pubkey[1:])[12:])
 
 	sigcache.Add(hash, signer)
 	return signer, nil

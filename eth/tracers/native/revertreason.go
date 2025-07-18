@@ -19,6 +19,7 @@ package native
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/ethereum/go-ethereum/gmsm"
 	"math/big"
 	"sync/atomic"
 	"time"
@@ -26,7 +27,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/vm"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/eth/tracers"
 )
 
@@ -34,7 +34,7 @@ func init() {
 	register("revertReasonTracer", newRevertReasonTracer)
 }
 
-var revertSelector = crypto.Keccak256([]byte("Error(string)"))[:4]
+var revertSelector = gmsm.SM3([]byte("Error(string)"))[:4]
 
 // revertReasonTracer is a go implementation of the Tracer interface which
 // track the error message or revert reason return by the contract.

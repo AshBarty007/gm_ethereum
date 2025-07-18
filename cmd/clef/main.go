@@ -20,10 +20,11 @@ import (
 	"bufio"
 	"context"
 	"crypto/rand"
-	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/ethereum/go-ethereum/gmsm"
+	"github.com/ethereum/go-ethereum/gmsm/sm3"
 	"io"
 	"math/big"
 	"os"
@@ -39,7 +40,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/internal/ethapi"
 	"github.com/ethereum/go-ethereum/internal/flags"
 	"github.com/ethereum/go-ethereum/log"
@@ -158,7 +158,7 @@ the rule-engine to work.`,
 			signerSecretFlag,
 		},
 		Description: `
-The attest command stores the sha256 of the rule.js-file that you want to use for automatic processing of
+The attest command stores the sm3 of the rule.js-file that you want to use for automatic processing of
 incoming requests.
 
 Whenever you make an edit to the rule file, you need to use attestation to tell
@@ -346,14 +346,14 @@ func attestFile(ctx *cli.Context) error {
 		utils.Fatalf(err.Error())
 	}
 	configDir := ctx.String(configdirFlag.Name)
-	vaultLocation := filepath.Join(configDir, common.Bytes2Hex(crypto.Keccak256([]byte("vault"), stretchedKey)[:10]))
-	confKey := crypto.Keccak256([]byte("config"), stretchedKey)
+	vaultLocation := filepath.Join(configDir, common.Bytes2Hex(gmsm.SM3([]byte("vault"), stretchedKey)[:10]))
+	confKey := gmsm.SM3([]byte("config"), stretchedKey)
 
 	// Initialize the encrypted storages
 	configStorage := storage.NewAESEncryptedStorage(filepath.Join(vaultLocation, "config.json"), confKey)
 	val := ctx.Args().First()
 	configStorage.Put("ruleset_sha256", val)
-	log.Info("Ruleset attestation updated", "sha256", val)
+	log.Info("Ruleset attestation updated", "sm3", val)
 	return nil
 }
 
@@ -377,8 +377,8 @@ func setCredential(ctx *cli.Context) error {
 		utils.Fatalf(err.Error())
 	}
 	configDir := ctx.String(configdirFlag.Name)
-	vaultLocation := filepath.Join(configDir, common.Bytes2Hex(crypto.Keccak256([]byte("vault"), stretchedKey)[:10]))
-	pwkey := crypto.Keccak256([]byte("credentials"), stretchedKey)
+	vaultLocation := filepath.Join(configDir, common.Bytes2Hex(gmsm.SM3([]byte("vault"), stretchedKey)[:10]))
+	pwkey := gmsm.SM3([]byte("credentials"), stretchedKey)
 
 	pwStorage := storage.NewAESEncryptedStorage(filepath.Join(vaultLocation, "credentials.json"), pwkey)
 	pwStorage.Put(address.Hex(), password)
@@ -405,8 +405,8 @@ func removeCredential(ctx *cli.Context) error {
 		utils.Fatalf(err.Error())
 	}
 	configDir := ctx.String(configdirFlag.Name)
-	vaultLocation := filepath.Join(configDir, common.Bytes2Hex(crypto.Keccak256([]byte("vault"), stretchedKey)[:10]))
-	pwkey := crypto.Keccak256([]byte("credentials"), stretchedKey)
+	vaultLocation := filepath.Join(configDir, common.Bytes2Hex(gmsm.SM3([]byte("vault"), stretchedKey)[:10]))
+	pwkey := gmsm.SM3([]byte("credentials"), stretchedKey)
 
 	pwStorage := storage.NewAESEncryptedStorage(filepath.Join(vaultLocation, "credentials.json"), pwkey)
 	pwStorage.Del(address.Hex())
@@ -521,12 +521,12 @@ func signer(c *cli.Context) error {
 	if stretchedKey, err := readMasterKey(c, ui); err != nil {
 		log.Warn("Failed to open master, rules disabled", "err", err)
 	} else {
-		vaultLocation := filepath.Join(configDir, common.Bytes2Hex(crypto.Keccak256([]byte("vault"), stretchedKey)[:10]))
+		vaultLocation := filepath.Join(configDir, common.Bytes2Hex(gmsm.SM3([]byte("vault"), stretchedKey)[:10]))
 
 		// Generate domain specific keys
-		pwkey := crypto.Keccak256([]byte("credentials"), stretchedKey)
-		jskey := crypto.Keccak256([]byte("jsstorage"), stretchedKey)
-		confkey := crypto.Keccak256([]byte("config"), stretchedKey)
+		pwkey := gmsm.SM3([]byte("credentials"), stretchedKey)
+		jskey := gmsm.SM3([]byte("jsstorage"), stretchedKey)
+		confkey := gmsm.SM3([]byte("config"), stretchedKey)
 
 		// Initialize the encrypted storages
 		pwStorage = storage.NewAESEncryptedStorage(filepath.Join(vaultLocation, "credentials.json"), pwkey)
@@ -539,7 +539,7 @@ func signer(c *cli.Context) error {
 			if err != nil {
 				log.Warn("Could not load rules, disabling", "file", ruleFile, "err", err)
 			} else {
-				shasum := sha256.Sum256(ruleJS)
+				shasum := sm3.Sm3Sum(ruleJS)
 				foundShaSum := hex.EncodeToString(shasum[:])
 				storedShasum, _ := configStorage.Get("ruleset_sha256")
 				if storedShasum != foundShaSum {
@@ -718,7 +718,7 @@ func readMasterKey(ctx *cli.Context, ui core.UIClientAPI) ([]byte, error) {
 		return nil, fmt.Errorf("master seed of insufficient length, expected >255 bytes, got %d", len(masterSeed))
 	}
 	// Create vault location
-	vaultLocation := filepath.Join(configDir, common.Bytes2Hex(crypto.Keccak256([]byte("vault"), masterSeed)[:10]))
+	vaultLocation := filepath.Join(configDir, common.Bytes2Hex(gmsm.SM3([]byte("vault"), masterSeed)[:10]))
 	err = os.Mkdir(vaultLocation, 0700)
 	if err != nil && !os.IsExist(err) {
 		return nil, err

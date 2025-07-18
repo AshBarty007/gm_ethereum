@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"github.com/ethereum/go-ethereum/gmsm"
 	"math"
 	"sort"
 	"sync"
@@ -27,7 +28,6 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common/bitutil"
-	"github.com/ethereum/go-ethereum/crypto"
 )
 
 // bloomIndexes represents the bit indexes inside the bloom filter that belong
@@ -36,7 +36,7 @@ type bloomIndexes [3]uint
 
 // calcBloomIndexes returns the bloom filter bit indexes belonging to the given key.
 func calcBloomIndexes(b []byte) bloomIndexes {
-	b = crypto.Keccak256(b)
+	b = gmsm.SM3(b)
 
 	var idxs bloomIndexes
 	for i := 0; i < len(idxs); i++ {

@@ -19,6 +19,7 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"github.com/ethereum/go-ethereum/gmsm"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -34,7 +35,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/state/snapshot"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/internal/flags"
 	"github.com/ethereum/go-ethereum/log"
@@ -321,7 +321,7 @@ func checkStateContent(ctx *cli.Context) error {
 	defer db.Close()
 	var (
 		it        = rawdb.NewKeyLengthIterator(db.NewIterator(prefix, start), 32)
-		hasher    = crypto.NewKeccakState()
+		hasher    = gmsm.NewSm3State()
 		got       = make([]byte, 32)
 		errs      int
 		count     int
@@ -334,7 +334,9 @@ func checkStateContent(ctx *cli.Context) error {
 		v := it.Value()
 		hasher.Reset()
 		hasher.Write(v)
-		hasher.Read(got)
+		//hasher.Read(got)
+		got = hasher.Sum(nil)
+
 		if !bytes.Equal(k, got) {
 			errs++
 			fmt.Printf("Error at %#x\n", k)

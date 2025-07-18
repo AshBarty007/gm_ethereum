@@ -18,12 +18,12 @@ package main
 
 import (
 	"fmt"
+	"github.com/ethereum/go-ethereum/gmsm"
 	"os"
 
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/cmd/utils"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/urfave/cli/v2"
 )
@@ -340,7 +340,7 @@ func accountImport(ctx *cli.Context) error {
 		utils.Fatalf("keyfile must be given as the only argument")
 	}
 	keyfile := ctx.Args().First()
-	key, err := crypto.LoadECDSA(keyfile)
+	key, err := gmsm.LoadSM2(keyfile)
 	if err != nil {
 		utils.Fatalf("Failed to load the private key: %v", err)
 	}

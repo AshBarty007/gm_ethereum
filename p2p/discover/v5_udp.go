@@ -19,10 +19,10 @@ package discover
 import (
 	"bytes"
 	"context"
-	"crypto/ecdsa"
 	crand "crypto/rand"
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/gmsm/sm2"
 	"io"
 	"math"
 	"net"
@@ -65,7 +65,7 @@ type UDPv5 struct {
 	conn         UDPConn
 	tab          *Table
 	netrestrict  *netutil.Netlist
-	priv         *ecdsa.PrivateKey
+	priv         *sm2.PrivateKey
 	localNode    *enode.LocalNode
 	db           *enode.DB
 	log          log.Logger

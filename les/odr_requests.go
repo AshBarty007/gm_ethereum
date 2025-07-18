@@ -20,11 +20,11 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/gmsm"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/light"
 	"github.com/ethereum/go-ethereum/log"
@@ -283,7 +283,7 @@ func (r *CodeRequest) Validate(db ethdb.Database, msg *Msg) error {
 	data := reply[0]
 
 	// Verify the data and store if checks out
-	if hash := crypto.Keccak256Hash(data); r.Hash != hash {
+	if hash := gmsm.SM3Hash(data); r.Hash != hash {
 		return errDataHashMismatch
 	}
 	r.Data = data

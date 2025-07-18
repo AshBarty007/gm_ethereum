@@ -18,10 +18,10 @@ package main
 
 import (
 	"fmt"
+	"github.com/ethereum/go-ethereum/gmsm"
 	"net"
 
 	"github.com/ethereum/go-ethereum/cmd/devp2p/internal/ethtest"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/p2p"
 	"github.com/ethereum/go-ethereum/p2p/rlpx"
 	"github.com/ethereum/go-ethereum/rlp"
@@ -72,7 +72,7 @@ func rlpxPing(ctx *cli.Context) error {
 		return err
 	}
 	conn := rlpx.NewConn(fd, n.Pubkey())
-	ourKey, _ := crypto.GenerateKey()
+	ourKey, _ := gmsm.GenerateKey()
 	_, err = conn.Handshake(ourKey)
 	if err != nil {
 		return err

@@ -24,6 +24,7 @@ import (
 	"context"
 	"crypto/rand"
 	"fmt"
+	"github.com/ethereum/go-ethereum/gmsm"
 	"math/big"
 	"sync/atomic"
 	"testing"
@@ -40,7 +41,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/forkid"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/eth/ethconfig"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/event"
@@ -54,14 +54,14 @@ import (
 )
 
 var (
-	bankKey, _ = crypto.GenerateKey()
-	bankAddr   = crypto.PubkeyToAddress(bankKey.PublicKey)
+	bankKey, _ = gmsm.GenerateKey()
+	bankAddr   = gmsm.PubkeyToAddress(bankKey.PublicKey)
 	bankFunds  = big.NewInt(1_000_000_000_000_000_000)
 
-	userKey1, _ = crypto.GenerateKey()
-	userKey2, _ = crypto.GenerateKey()
-	userAddr1   = crypto.PubkeyToAddress(userKey1.PublicKey)
-	userAddr2   = crypto.PubkeyToAddress(userKey2.PublicKey)
+	userKey1, _ = gmsm.GenerateKey()
+	userKey2, _ = gmsm.GenerateKey()
+	userAddr1   = gmsm.PubkeyToAddress(userKey1.PublicKey)
+	userAddr2   = gmsm.PubkeyToAddress(userKey2.PublicKey)
 
 	testContractAddr         common.Address
 	testContractCode         = common.Hex2Bytes("606060405260cc8060106000396000f360606040526000357c01000000000000000000000000000000000000000000000000000000009004806360cd2685146041578063c16431b914606b57603f565b005b6055600480803590602001909190505060a9565b6040518082815260200191505060405180910390f35b60886004808035906020019091908035906020019091905050608a565b005b80600060005083606481101560025790900160005b50819055505b5050565b6000600060005082606481101560025790900160005b5054905060c7565b91905056")
@@ -72,8 +72,8 @@ var (
 
 	// Checkpoint oracle relative fields
 	oracleAddr   common.Address
-	signerKey, _ = crypto.GenerateKey()
-	signerAddr   = crypto.PubkeyToAddress(signerKey.PublicKey)
+	signerKey, _ = gmsm.GenerateKey()
+	signerAddr   = gmsm.PubkeyToAddress(signerKey.PublicKey)
 )
 
 var (
@@ -145,7 +145,7 @@ func prepare(n int, backend *backends.SimulatedBackend) {
 			// user1 deploys a test contract
 			tx3, _ := types.SignTx(types.NewContractCreation(userNonce1+1, big.NewInt(0), 200000, big.NewInt(params.InitialBaseFee), testContractCode), signer, userKey1)
 			backend.SendTransaction(ctx, tx3)
-			testContractAddr = crypto.CreateAddress(userAddr1, userNonce1+1)
+			testContractAddr = gmsm.CreateAddress(userAddr1, userNonce1+1)
 
 			// user1 deploys a event contract
 			tx4, _ := types.SignTx(types.NewContractCreation(userNonce1+2, big.NewInt(0), 200000, big.NewInt(params.InitialBaseFee), testEventEmitterCode), signer, userKey1)
@@ -206,7 +206,7 @@ func newTestClientHandler(backend *backends.SimulatedBackend, odr *LesOdr, index
 	chain, _ := light.NewLightChain(odr, gspec.Config, engine, nil)
 	if indexers != nil {
 		checkpointConfig := &params.CheckpointOracleConfig{
-			Address:   crypto.CreateAddress(bankAddr, 0),
+			Address:   gmsm.CreateAddress(bankAddr, 0),
 			Signers:   []common.Address{signerAddr},
 			Threshold: 1,
 		}
@@ -274,7 +274,7 @@ func newTestServerHandler(blocks int, indexers []*core.ChainIndexer, db ethdb.Da
 	txpool := core.NewTxPool(txpoolConfig, gspec.Config, simulation.Blockchain())
 	if indexers != nil {
 		checkpointConfig := &params.CheckpointOracleConfig{
-			Address:   crypto.CreateAddress(bankAddr, 0),
+			Address:   gmsm.CreateAddress(bankAddr, 0),
 			Signers:   []common.Address{signerAddr},
 			Threshold: 1,
 		}

@@ -19,10 +19,10 @@ package node
 import (
 	"context"
 	"fmt"
+	"github.com/ethereum/go-ethereum/gmsm"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/internal/debug"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/p2p"
@@ -325,5 +325,5 @@ func (s *web3API) ClientVersion() string {
 // Sha3 applies the ethereum sha3 implementation on the input.
 // It assumes the input is hex encoded.
 func (s *web3API) Sha3(input hexutil.Bytes) hexutil.Bytes {
-	return crypto.Keccak256(input)
+	return gmsm.SM3(input)
 }

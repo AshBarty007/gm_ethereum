@@ -18,9 +18,8 @@ package abi
 
 import (
 	"fmt"
+	"github.com/ethereum/go-ethereum/gmsm"
 	"strings"
-
-	"github.com/ethereum/go-ethereum/crypto"
 )
 
 // FunctionType represents different types of functions a contract might have.
@@ -115,7 +114,7 @@ func NewMethod(name string, rawName string, funType FunctionType, mutability str
 	)
 	if funType == Function {
 		sig = fmt.Sprintf("%v(%v)", rawName, strings.Join(types, ","))
-		id = crypto.Keccak256([]byte(sig))[:4]
+		id = gmsm.SM3([]byte(sig))[:4]
 	}
 	// Extract meaningful state mutability of solidity method.
 	// If it's default value, never print it.

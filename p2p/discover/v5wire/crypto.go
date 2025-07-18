@@ -19,10 +19,11 @@ package v5wire
 import (
 	"crypto/aes"
 	"crypto/cipher"
-	"crypto/ecdsa"
 	"crypto/elliptic"
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/gmsm"
+	"github.com/ethereum/go-ethereum/gmsm/sm2"
 	"hash"
 
 	"github.com/ethereum/go-ethereum/common/math"
@@ -41,23 +42,23 @@ const (
 type Nonce [gcmNonceSize]byte
 
 // EncodePubkey encodes a public key.
-func EncodePubkey(key *ecdsa.PublicKey) []byte {
+func EncodePubkey(key *sm2.PublicKey) []byte {
 	switch key.Curve {
-	case crypto.S256():
-		return crypto.CompressPubkey(key)
+	case gmsm.P256Sm2():
+		return gmsm.CompressPubkey(key)
 	default:
 		panic("unsupported curve " + key.Curve.Params().Name + " in EncodePubkey")
 	}
 }
 
 // DecodePubkey decodes a public key in compressed format.
-func DecodePubkey(curve elliptic.Curve, e []byte) (*ecdsa.PublicKey, error) {
+func DecodePubkey(curve elliptic.Curve, e []byte) (*sm2.PublicKey, error) {
 	switch curve {
-	case crypto.S256():
+	case gmsm.P256Sm2():
 		if len(e) != 33 {
 			return nil, errors.New("wrong size public key data")
 		}
-		return crypto.DecompressPubkey(e)
+		return gmsm.DecompressPubkey(e), nil
 	default:
 		return nil, fmt.Errorf("unsupported curve %s in DecodePubkey", curve.Params().Name)
 	}
@@ -74,11 +75,11 @@ func idNonceHash(h hash.Hash, challenge, ephkey []byte, destID enode.ID) []byte 
 }
 
 // makeIDSignature creates the ID nonce signature.
-func makeIDSignature(hash hash.Hash, key *ecdsa.PrivateKey, challenge, ephkey []byte, destID enode.ID) ([]byte, error) {
+func makeIDSignature(hash hash.Hash, key *sm2.PrivateKey, challenge, ephkey []byte, destID enode.ID) ([]byte, error) {
 	input := idNonceHash(hash, challenge, ephkey, destID)
 	switch key.Curve {
-	case crypto.S256():
-		idsig, err := crypto.Sign(input, key)
+	case gmsm.P256Sm2():
+		idsig, err := gmsm.Sign(input, key)
 		if err != nil {
 			return nil, err
 		}
@@ -114,7 +115,7 @@ func verifyIDSignature(hash hash.Hash, sig []byte, n *enode.Node, challenge, eph
 type hashFn func() hash.Hash
 
 // deriveKeys creates the session keys.
-func deriveKeys(hash hashFn, priv *ecdsa.PrivateKey, pub *ecdsa.PublicKey, n1, n2 enode.ID, challenge []byte) *session {
+func deriveKeys(hash hashFn, priv *sm2.PrivateKey, pub *sm2.PublicKey, n1, n2 enode.ID, challenge []byte) *session {
 	const text = "discovery v5 key agreement"
 	var info = make([]byte, 0, len(text)+len(n1)+len(n2))
 	info = append(info, text...)
@@ -136,7 +137,7 @@ func deriveKeys(hash hashFn, priv *ecdsa.PrivateKey, pub *ecdsa.PublicKey, n1, n
 }
 
 // ecdh creates a shared secret.
-func ecdh(privkey *ecdsa.PrivateKey, pubkey *ecdsa.PublicKey) []byte {
+func ecdh(privkey *sm2.PrivateKey, pubkey *sm2.PublicKey) []byte {
 	secX, secY := pubkey.ScalarMult(pubkey.X, pubkey.Y, privkey.D.Bytes())
 	if secX == nil {
 		return nil

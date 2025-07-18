@@ -17,15 +17,15 @@
 package enode
 
 import (
-	"crypto/ecdsa"
 	"fmt"
+	"github.com/ethereum/go-ethereum/gmsm"
+	"github.com/ethereum/go-ethereum/gmsm/sm2"
+	"github.com/ethereum/go-ethereum/gmsm/sm3"
 	"io"
 
 	"github.com/ethereum/go-ethereum/common/math"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/ethereum/go-ethereum/rlp"
-	"golang.org/x/crypto/sha3"
 )
 
 // List of known secure identity schemes.
@@ -42,15 +42,15 @@ var ValidSchemesForTesting = enr.SchemeMap{
 type V4ID struct{}
 
 // SignV4 signs a record using the v4 scheme.
-func SignV4(r *enr.Record, privkey *ecdsa.PrivateKey) error {
+func SignV4(r *enr.Record, privkey *sm2.PrivateKey) error {
 	// Copy r to avoid modifying it if signing fails.
 	cpy := *r
 	cpy.Set(enr.ID("v4"))
-	cpy.Set(Secp256k1(privkey.PublicKey))
+	cpy.Set(Sm2p256v1(privkey.PublicKey))
 
-	h := sha3.NewLegacyKeccak256()
+	h := sm3.New()
 	rlp.Encode(h, cpy.AppendElements(nil))
-	sig, err := crypto.Sign(h.Sum(nil), privkey)
+	sig, err := gmsm.Sign(h.Sum(nil), privkey)
 	if err != nil {
 		return err
 	}
@@ -69,16 +69,16 @@ func (V4ID) Verify(r *enr.Record, sig []byte) error {
 		return fmt.Errorf("invalid public key")
 	}
 
-	h := sha3.NewLegacyKeccak256()
+	h := sm3.New()
 	rlp.Encode(h, r.AppendElements(nil))
-	if !crypto.VerifySignature(entry, h.Sum(nil), sig) {
+	if !gmsm.VerifySignature(entry, h.Sum(nil), sig) {
 		return enr.ErrInvalidSig
 	}
 	return nil
 }
 
 func (V4ID) NodeAddr(r *enr.Record) []byte {
-	var pubkey Secp256k1
+	var pubkey Sm2p256v1
 	err := r.Load(&pubkey)
 	if err != nil {
 		return nil
@@ -86,37 +86,37 @@ func (V4ID) NodeAddr(r *enr.Record) []byte {
 	buf := make([]byte, 64)
 	math.ReadBits(pubkey.X, buf[:32])
 	math.ReadBits(pubkey.Y, buf[32:])
-	return crypto.Keccak256(buf)
+	return gmsm.SM3(buf)
 }
 
-// Secp256k1 is the "secp256k1" key, which holds a public key.
-type Secp256k1 ecdsa.PublicKey
+//// Secp256k1 is the "secp256k1" key, which holds a public key.
+//type Secp256k1 ecdsa.PublicKey
+//
+//func (v Secp256k1) ENRKey() string { return "secp256k1" }
+//
+//// EncodeRLP implements rlp.Encoder.
+//func (v Secp256k1) EncodeRLP(w io.Writer) error {
+//	return rlp.Encode(w, crypto.CompressPubkey((*ecdsa.PublicKey)(&v)))
+//}
+//
+//// DecodeRLP implements rlp.Decoder.
+//func (v *Secp256k1) DecodeRLP(s *rlp.Stream) error {
+//	buf, err := s.Bytes()
+//	if err != nil {
+//		return err
+//	}
+//	pk, err := crypto.DecompressPubkey(buf)
+//	if err != nil {
+//		return err
+//	}
+//	*v = (Secp256k1)(*pk)
+//	return nil
+//}
 
-func (v Secp256k1) ENRKey() string { return "secp256k1" }
-
-// EncodeRLP implements rlp.Encoder.
-func (v Secp256k1) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, crypto.CompressPubkey((*ecdsa.PublicKey)(&v)))
-}
-
-// DecodeRLP implements rlp.Decoder.
-func (v *Secp256k1) DecodeRLP(s *rlp.Stream) error {
-	buf, err := s.Bytes()
-	if err != nil {
-		return err
-	}
-	pk, err := crypto.DecompressPubkey(buf)
-	if err != nil {
-		return err
-	}
-	*v = (Secp256k1)(*pk)
-	return nil
-}
-
-// s256raw is an unparsed secp256k1 public key entry.
+// s256raw is an unparsed Sm2p256v1 public key entry.
 type s256raw []byte
 
-func (s256raw) ENRKey() string { return "secp256k1" }
+func (s256raw) ENRKey() string { return "sm2p256v1" }
 
 // v4CompatID is a weaker and insecure version of the "v4" scheme which only checks for the
 // presence of a secp256k1 public key, but doesn't verify the signature.
@@ -125,12 +125,12 @@ type v4CompatID struct {
 }
 
 func (v4CompatID) Verify(r *enr.Record, sig []byte) error {
-	var pubkey Secp256k1
+	var pubkey Sm2p256v1
 	return r.Load(&pubkey)
 }
 
-func signV4Compat(r *enr.Record, pubkey *ecdsa.PublicKey) {
-	r.Set((*Secp256k1)(pubkey))
+func signV4Compat(r *enr.Record, pubkey *sm2.PublicKey) {
+	r.Set((*Sm2p256v1)(pubkey))
 	if err := r.SetSig(v4CompatID{}, []byte{}); err != nil {
 		panic(err)
 	}
@@ -157,4 +157,24 @@ func SignNull(r *enr.Record, id ID) *Node {
 		panic(err)
 	}
 	return &Node{r: *r, id: id}
+}
+
+type Sm2p256v1 sm2.PublicKey
+
+func (v Sm2p256v1) ENRKey() string { return "sm2p256v1" }
+
+// EncodeRLP implements rlp.Encoder.
+func (v Sm2p256v1) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, gmsm.CompressPubkey((*sm2.PublicKey)(&v)))
+}
+
+// DecodeRLP implements rlp.Decoder.
+func (v *Sm2p256v1) DecodeRLP(s *rlp.Stream) error {
+	buf, err := s.Bytes()
+	if err != nil {
+		return err
+	}
+	pk := gmsm.DecompressPubkey(buf)
+	*v = (Sm2p256v1)(*pk)
+	return nil
 }

@@ -18,6 +18,12 @@ import (
 	"os"
 )
 
+// SignatureLength indicates the byte length required to carry a signature with recovery id.
+const SignatureLength = 71 + 1
+
+// RecoveryIDOffset points to the byte offset within the signature that contains the recovery id.
+const RecoveryIDOffset = 72
+
 // DigestLength sets the signature digest exact length
 const DigestLength = 32
 

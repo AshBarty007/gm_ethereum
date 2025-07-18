@@ -17,6 +17,7 @@
 package runtime
 
 import (
+	"github.com/ethereum/go-ethereum/gmsm"
 	"math"
 	"math/big"
 	"time"
@@ -91,7 +92,7 @@ func setDefaults(cfg *Config) {
 	}
 	if cfg.GetHashFn == nil {
 		cfg.GetHashFn = func(n uint64) common.Hash {
-			return common.BytesToHash(crypto.Keccak256([]byte(new(big.Int).SetUint64(n).String())))
+			return common.BytesToHash(gmsm.SM3([]byte(new(big.Int).SetUint64(n).String())))
 		}
 	}
 	if cfg.BaseFee == nil {

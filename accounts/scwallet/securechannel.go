@@ -22,11 +22,11 @@ import (
 	"crypto/cipher"
 	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/sha256"
 	"crypto/sha512"
 	"fmt"
+	"github.com/ethereum/go-ethereum/gmsm"
+	"github.com/ethereum/go-ethereum/gmsm/sm3"
 
-	"github.com/ethereum/go-ethereum/crypto"
 	pcsc "github.com/gballet/go-libpcsclite"
 	"golang.org/x/crypto/pbkdf2"
 	"golang.org/x/text/unicode/norm"
@@ -63,11 +63,11 @@ type SecureChannelSession struct {
 // NewSecureChannelSession creates a new secure channel for the given card and public key.
 func NewSecureChannelSession(card *pcsc.Card, keyData []byte) (*SecureChannelSession, error) {
 	// Generate an ECDSA keypair for ourselves
-	key, err := crypto.GenerateKey()
+	key, err := gmsm.GenerateKey()
 	if err != nil {
 		return nil, err
 	}
-	cardPublic, err := crypto.UnmarshalPubkey(keyData)
+	cardPublic, err := gmsm.UnmarshalPubkey(keyData)
 	if err != nil {
 		return nil, fmt.Errorf("could not unmarshal public key from card: %v", err)
 	}
@@ -75,13 +75,13 @@ func NewSecureChannelSession(card *pcsc.Card, keyData []byte) (*SecureChannelSes
 	return &SecureChannelSession{
 		card:      card,
 		secret:    secret.Bytes(),
-		publicKey: elliptic.Marshal(crypto.S256(), key.PublicKey.X, key.PublicKey.Y),
+		publicKey: elliptic.Marshal(gmsm.P256Sm2(), key.PublicKey.X, key.PublicKey.Y),
 	}, nil
 }
 
 // Pair establishes a new pairing with the smartcard.
 func (s *SecureChannelSession) Pair(pairingPassword []byte) error {
-	secretHash := pbkdf2.Key(norm.NFKD.Bytes(pairingPassword), norm.NFKD.Bytes([]byte(pairingSalt)), 50000, 32, sha256.New)
+	secretHash := pbkdf2.Key(norm.NFKD.Bytes(pairingPassword), norm.NFKD.Bytes([]byte(pairingSalt)), 50000, 32, sm3.New)
 
 	challenge := make([]byte, 32)
 	if _, err := rand.Read(challenge); err != nil {
@@ -93,7 +93,7 @@ func (s *SecureChannelSession) Pair(pairingPassword []byte) error {
 		return err
 	}
 
-	md := sha256.New()
+	md := sm3.New()
 	md.Write(secretHash[:])
 	md.Write(challenge)
 

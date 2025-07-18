@@ -100,6 +100,7 @@ func TestSign(t *testing.T) {
 	if !result {
 		t.Errorf("Verify error: want: %t have: %t", true, result)
 	}
+	t.Log("len", len(sig))
 }
 
 func TestInvalidSign(t *testing.T) {
@@ -126,7 +127,7 @@ func TestNewContractAddress(t *testing.T) {
 	checkAddr(t, common.HexToAddress("0xee2b90774DCBD6Ca67f29B801111E842412BA26f"), caddr2)
 }
 
-func TestLoadECDSA(t *testing.T) {
+func TestLoadSM2(t *testing.T) {
 	tests := []struct {
 		input string
 		err   string
@@ -186,7 +187,7 @@ func TestLoadECDSA(t *testing.T) {
 	}
 }
 
-func TestSaveECDSA(t *testing.T) {
+func TestSaveSM2(t *testing.T) {
 	f, err := os.CreateTemp("", "saveecdsa_test.*.txt")
 	if err != nil {
 		t.Fatal(err)

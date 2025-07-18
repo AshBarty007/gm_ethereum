@@ -20,12 +20,12 @@ import (
 	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
-	"crypto/ecdsa"
 	crand "crypto/rand"
-	"crypto/sha256"
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/gmsm/sm2"
+	"github.com/ethereum/go-ethereum/gmsm/sm3"
 	"hash"
 
 	"github.com/ethereum/go-ethereum/common/mclock"
@@ -131,7 +131,7 @@ var (
 type Codec struct {
 	sha256    hash.Hash
 	localnode *enode.LocalNode
-	privkey   *ecdsa.PrivateKey
+	privkey   *sm2.PrivateKey
 	sc        *SessionCache
 
 	// encoder buffers
@@ -145,9 +145,9 @@ type Codec struct {
 }
 
 // NewCodec creates a wire codec.
-func NewCodec(ln *enode.LocalNode, key *ecdsa.PrivateKey, clock mclock.Clock) *Codec {
+func NewCodec(ln *enode.LocalNode, key *sm2.PrivateKey, clock mclock.Clock) *Codec {
 	c := &Codec{
-		sha256:    sha256.New(),
+		sha256:    sm3.New(),
 		localnode: ln,
 		privkey:   key,
 		sc:        NewSessionCache(1024, clock),
@@ -344,8 +344,8 @@ func (c *Codec) makeHandshakeAuth(toID enode.ID, addr string, challenge *Whoarey
 
 	// Create the ephemeral key. This needs to be first because the
 	// key is part of the ID nonce signature.
-	var remotePubkey = new(ecdsa.PublicKey)
-	if err := challenge.Node.Load((*enode.Secp256k1)(remotePubkey)); err != nil {
+	var remotePubkey = new(sm2.PublicKey)
+	if err := challenge.Node.Load((*enode.Sm2p256v1)(remotePubkey)); err != nil {
 		return nil, nil, fmt.Errorf("can't find secp256k1 key for recipient")
 	}
 	ephkey, err := c.sc.ephemeralKeyGen()
@@ -372,7 +372,7 @@ func (c *Codec) makeHandshakeAuth(toID enode.ID, addr string, challenge *Whoarey
 	}
 
 	// Create session keys.
-	sec := deriveKeys(sha256.New, ephkey, remotePubkey, c.localnode.ID(), challenge.Node.ID(), cdata)
+	sec := deriveKeys(sm3.New, ephkey, remotePubkey, c.localnode.ID(), challenge.Node.ID(), cdata)
 	if sec == nil {
 		return nil, nil, fmt.Errorf("key derivation failed")
 	}
@@ -525,7 +525,7 @@ func (c *Codec) decodeHandshake(fromAddr string, head *Header) (n *enode.Node, a
 		return nil, auth, nil, errInvalidAuthKey
 	}
 	// Derive sesssion keys.
-	session := deriveKeys(sha256.New, c.privkey, ephkey, auth.h.SrcID, c.localnode.ID(), cdata)
+	session := deriveKeys(sm3.New, c.privkey, ephkey, auth.h.SrcID, c.localnode.ID(), cdata)
 	session = session.keysFlipped()
 	return n, auth, session, nil
 }

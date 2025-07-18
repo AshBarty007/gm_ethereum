@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"container/heap"
 	"errors"
+	"github.com/ethereum/go-ethereum/gmsm"
 	"io"
 	"math/big"
 	"sync/atomic"
@@ -27,7 +28,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/math"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
@@ -199,25 +199,25 @@ func (tx *Transaction) setDecoded(inner TxData, size int) {
 }
 
 func sanityCheckSignature(v *big.Int, r *big.Int, s *big.Int, maybeProtected bool) error {
-	if isProtectedV(v) && !maybeProtected {
-		return ErrUnexpectedProtection
-	}
-
-	var plainV byte
-	if isProtectedV(v) {
-		chainID := deriveChainId(v).Uint64()
-		plainV = byte(v.Uint64() - 35 - 2*chainID)
-	} else if maybeProtected {
-		// Only EIP-155 signatures can be optionally protected. Since
-		// we determined this v value is not protected, it must be a
-		// raw 27 or 28.
-		plainV = byte(v.Uint64() - 27)
-	} else {
-		// If the signature is not optionally protected, we assume it
-		// must already be equal to the recovery id.
-		plainV = byte(v.Uint64())
-	}
-	if !crypto.ValidateSignatureValues(plainV, r, s, false) {
+	//if isProtectedV(v) && !maybeProtected {
+	//	return ErrUnexpectedProtection
+	//}
+	//
+	//var plainV byte
+	//if isProtectedV(v) {
+	//	chainID := deriveChainId(v).Uint64()
+	//	plainV = byte(v.Uint64() - 35 - 2*chainID)
+	//} else if maybeProtected {
+	//	// Only EIP-155 signatures can be optionally protected. Since
+	//	// we determined this v value is not protected, it must be a
+	//	// raw 27 or 28.
+	//	plainV = byte(v.Uint64() - 27)
+	//} else {
+	//	// If the signature is not optionally protected, we assume it
+	//	// must already be equal to the recovery id.
+	//	plainV = byte(v.Uint64())
+	//}
+	if !gmsm.ValidateSignatureValues(r, s, false) {
 		return ErrInvalidSig
 	}
 

@@ -18,6 +18,7 @@ package native
 
 import (
 	"encoding/json"
+	"github.com/ethereum/go-ethereum/gmsm"
 	"math/big"
 	"sync/atomic"
 	"time"
@@ -25,7 +26,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/vm"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/eth/tracers"
 )
 
@@ -107,14 +107,14 @@ func (t *prestateTracer) CaptureState(pc uint64, op vm.OpCode, gas, cost uint64,
 	case op == vm.CREATE:
 		addr := scope.Contract.Address()
 		nonce := t.env.StateDB.GetNonce(addr)
-		t.lookupAccount(crypto.CreateAddress(addr, nonce))
+		t.lookupAccount(gmsm.CreateAddress(addr, nonce))
 	case stackLen >= 4 && op == vm.CREATE2:
 		offset := stackData[stackLen-2]
 		size := stackData[stackLen-3]
 		init := scope.Memory.GetCopy(int64(offset.Uint64()), int64(size.Uint64()))
-		inithash := crypto.Keccak256(init)
+		inithash := gmsm.SM3(init)
 		salt := stackData[stackLen-4]
-		t.lookupAccount(crypto.CreateAddress2(scope.Contract.Address(), salt.Bytes32(), inithash))
+		t.lookupAccount(gmsm.CreateAddress2(scope.Contract.Address(), salt.Bytes32(), inithash))
 	}
 }
 

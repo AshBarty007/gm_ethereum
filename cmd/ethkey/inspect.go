@@ -19,11 +19,11 @@ package main
 import (
 	"encoding/hex"
 	"fmt"
+	"github.com/ethereum/go-ethereum/gmsm"
 	"os"
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/cmd/utils"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/urfave/cli/v2"
 )
 
@@ -75,10 +75,10 @@ make sure to use this feature with great caution!`,
 		out := outputInspect{
 			Address: key.Address.Hex(),
 			PublicKey: hex.EncodeToString(
-				crypto.FromECDSAPub(&key.PrivateKey.PublicKey)),
+				gmsm.FromSM2Pub(&key.PrivateKey.PublicKey)),
 		}
 		if showPrivate {
-			out.PrivateKey = hex.EncodeToString(crypto.FromECDSA(key.PrivateKey))
+			out.PrivateKey = hex.EncodeToString(gmsm.FromSM2(key.PrivateKey))
 		}
 
 		if ctx.Bool(jsonFlag.Name) {

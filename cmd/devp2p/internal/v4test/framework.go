@@ -19,6 +19,7 @@ package v4test
 import (
 	"crypto/ecdsa"
 	"fmt"
+	"github.com/ethereum/go-ethereum/gmsm"
 	"net"
 	"time"
 
@@ -45,7 +46,7 @@ func newTestEnv(remote string, listen1, listen2 string) *testenv {
 	if err != nil {
 		panic(err)
 	}
-	key, err := crypto.GenerateKey()
+	key, err := gmsm.GenerateKey()
 	if err != nil {
 		panic(err)
 	}

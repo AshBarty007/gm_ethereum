@@ -20,13 +20,13 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
+	"github.com/ethereum/go-ethereum/gmsm"
 	"math/big"
 	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -91,8 +91,8 @@ func TestEventId(t *testing.T) {
 			{ "type" : "event", "name" : "Check", "inputs": [{ "name" : "t", "type": "address" }, { "name": "b", "type": "uint256" }] }
 			]`,
 			expectations: map[string]common.Hash{
-				"Balance": crypto.Keccak256Hash([]byte("Balance(uint256)")),
-				"Check":   crypto.Keccak256Hash([]byte("Check(address,uint256)")),
+				"Balance": gmsm.SM3Hash([]byte("Balance(uint256)")),
+				"Check":   gmsm.SM3Hash([]byte("Check(address,uint256)")),
 			},
 		},
 	}

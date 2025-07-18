@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/gmsm"
 	"mime"
 
 	"github.com/ethereum/go-ethereum/accounts"
@@ -27,7 +28,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/consensus/clique"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/signer/core/apitypes"
 )
@@ -199,7 +199,7 @@ func (api *SignerAPI) determineSignatureFormat(ctx context.Context, contentType 
 // hash = keccak256("\x19\x00"${address}${data}).
 func SignTextValidator(validatorData apitypes.ValidatorData) (hexutil.Bytes, string) {
 	msg := fmt.Sprintf("\x19\x00%s%s", string(validatorData.Address.Bytes()), string(validatorData.Message))
-	return crypto.Keccak256([]byte(msg)), msg
+	return gmsm.SM3([]byte(msg)), msg
 }
 
 // cliqueHeaderHashAndRlp returns the hash which is used as input for the proof-of-authority
@@ -280,11 +280,11 @@ func (api *SignerAPI) EcRecover(ctx context.Context, data hexutil.Bytes, sig hex
 	}
 	sig[64] -= 27 // Transform yellow paper V from 27/28 to 0/1
 	hash := accounts.TextHash(data)
-	rpk, err := crypto.SigToPub(hash, sig)
+	rpk, err := gmsm.SigToPub(hash, sig)
 	if err != nil {
 		return common.Address{}, err
 	}
-	return crypto.PubkeyToAddress(*rpk), nil
+	return gmsm.PubkeyToAddress(*rpk), nil
 }
 
 // UnmarshalValidatorData converts the bytes input to typed data

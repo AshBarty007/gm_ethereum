@@ -20,10 +20,10 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/gmsm"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
 )
 
 type Error struct {
@@ -67,7 +67,7 @@ func NewError(name string, inputs Arguments) Error {
 
 	str := fmt.Sprintf("error %v(%v)", name, strings.Join(names, ", "))
 	sig := fmt.Sprintf("%v(%v)", name, strings.Join(types, ","))
-	id := common.BytesToHash(crypto.Keccak256([]byte(sig)))
+	id := common.BytesToHash(gmsm.SM3([]byte(sig)))
 
 	return Error{
 		Name:   name,

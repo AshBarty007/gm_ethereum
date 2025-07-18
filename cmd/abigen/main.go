@@ -19,6 +19,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/ethereum/go-ethereum/gmsm"
 	"io"
 	"os"
 	"regexp"
@@ -27,7 +28,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/cmd/utils"
 	"github.com/ethereum/go-ethereum/common/compiler"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/internal/flags"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/urfave/cli/v2"
@@ -205,7 +205,7 @@ func abigen(c *cli.Context) error {
 			// hex encoding of the keccak256 hash of the fully qualified library name.
 			// Note that the fully qualified library name is the path of its source
 			// file and the library name separated by ":".
-			libPattern := crypto.Keccak256Hash([]byte(name)).String()[2:36] // the first 2 chars are 0x
+			libPattern := gmsm.SM3Hash([]byte(name)).String()[2:36] // the first 2 chars are 0x
 			libs[libPattern] = nameParts[len(nameParts)-1]
 		}
 	}

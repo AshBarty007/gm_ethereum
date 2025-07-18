@@ -20,19 +20,19 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/gmsm"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/trie"
 )
 
 var (
-	sha3Nil = crypto.Keccak256Hash(nil)
+	sha3Nil = gmsm.SM3Hash(nil)
 )
 
 func NewState(ctx context.Context, head *types.Header, odr OdrBackend) *state.StateDB {
@@ -103,7 +103,7 @@ type odrTrie struct {
 }
 
 func (t *odrTrie) TryGet(key []byte) ([]byte, error) {
-	key = crypto.Keccak256(key)
+	key = gmsm.SM3(key)
 	var res []byte
 	err := t.do(key, func() (err error) {
 		res, err = t.trie.TryGet(key)
@@ -113,7 +113,7 @@ func (t *odrTrie) TryGet(key []byte) ([]byte, error) {
 }
 
 func (t *odrTrie) TryGetAccount(key []byte) (*types.StateAccount, error) {
-	key = crypto.Keccak256(key)
+	key = gmsm.SM3(key)
 	var res types.StateAccount
 	err := t.do(key, func() (err error) {
 		value, err := t.trie.TryGet(key)
@@ -129,7 +129,7 @@ func (t *odrTrie) TryGetAccount(key []byte) (*types.StateAccount, error) {
 }
 
 func (t *odrTrie) TryUpdateAccount(key []byte, acc *types.StateAccount) error {
-	key = crypto.Keccak256(key)
+	key = gmsm.SM3(key)
 	value, err := rlp.EncodeToBytes(acc)
 	if err != nil {
 		return fmt.Errorf("decoding error in account update: %w", err)
@@ -140,14 +140,14 @@ func (t *odrTrie) TryUpdateAccount(key []byte, acc *types.StateAccount) error {
 }
 
 func (t *odrTrie) TryUpdate(key, value []byte) error {
-	key = crypto.Keccak256(key)
+	key = gmsm.SM3(key)
 	return t.do(key, func() error {
 		return t.trie.TryUpdate(key, value)
 	})
 }
 
 func (t *odrTrie) TryDelete(key []byte) error {
-	key = crypto.Keccak256(key)
+	key = gmsm.SM3(key)
 	return t.do(key, func() error {
 		return t.trie.TryDelete(key)
 	})
@@ -155,7 +155,7 @@ func (t *odrTrie) TryDelete(key []byte) error {
 
 // TryDeleteAccount abstracts an account deletion from the trie.
 func (t *odrTrie) TryDeleteAccount(key []byte) error {
-	key = crypto.Keccak256(key)
+	key = gmsm.SM3(key)
 	return t.do(key, func() error {
 		return t.trie.TryDelete(key)
 	})
