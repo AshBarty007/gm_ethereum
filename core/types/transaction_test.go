@@ -18,9 +18,10 @@ package types
 
 import (
 	"bytes"
-	"crypto/ecdsa"
 	"encoding/json"
 	"fmt"
+	"github.com/ethereum/go-ethereum/gmsm"
+	"github.com/ethereum/go-ethereum/gmsm/sm2"
 	"math/big"
 	"math/rand"
 	"reflect"
@@ -28,7 +29,6 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
@@ -53,7 +53,7 @@ var (
 		common.FromHex("5544"),
 	).WithSignature(
 		HomesteadSigner{},
-		common.Hex2Bytes("98ff921201554726367d2be8c804a7ff89ccf285ebc57dff8ae4c44b9c19ac4a8887321be575c8095f789dd4c743dfe42c1820f9231f98a962b210e3ac2452a301"),
+		common.Hex2Bytes("98ff921201554726367d2be8c804a7ff89ccf285ebc57dff8ae4c44b9c19ac4a8887321be575c8095f789dd4c743dfe42c1820f9231f98a962b210e3ac2452a3"),
 	)
 
 	emptyEip2718Tx = NewTx(&AccessListTx{
@@ -68,7 +68,7 @@ var (
 
 	signedEip2718Tx, _ = emptyEip2718Tx.WithSignature(
 		NewEIP2930Signer(big.NewInt(1)),
-		common.Hex2Bytes("c9519f4f2b30335884581971573fadf60c6204f59a911df35ee8a540456b266032f1e8e2c5dd761f9e4f88f41c8310aeaba26a8bfcdacfedfa12ec3862d3752101"),
+		common.Hex2Bytes("c9519f4f2b30335884581971573fadf60c6204f59a911df35ee8a540456b266032f1e8e2c5dd761f9e4f88f41c8310aeaba26a8bfcdacfedfa12ec3862d37521"),
 	)
 )
 
@@ -96,7 +96,7 @@ func TestTransactionEncode(t *testing.T) {
 	if err != nil {
 		t.Fatalf("encode error: %v", err)
 	}
-	should := common.FromHex("f86103018207d094b94f5374fce5edbc8e2a8697c15331677e6ebf0b0a8255441ca098ff921201554726367d2be8c804a7ff89ccf285ebc57dff8ae4c44b9c19ac4aa08887321be575c8095f789dd4c743dfe42c1820f9231f98a962b210e3ac2452a3")
+	should := common.FromHex("f8628003018207d094b94f5374fce5edbc8e2a8697c15331677e6ebf0b0a825544a098ff921201554726367d2be8c804a7ff89ccf285ebc57dff8ae4c44b9c19ac4aa08887321be575c8095f789dd4c743dfe42c1820f9231f98a962b210e3ac2452a380")
 	if !bytes.Equal(txb, should) {
 		t.Errorf("encoded RLP mismatch, got %x", txb)
 	}
@@ -115,8 +115,8 @@ func TestEIP2718TransactionSigHash(t *testing.T) {
 // This test checks signature operations on access list transactions.
 func TestEIP2930Signer(t *testing.T) {
 	var (
-		key, _  = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
-		keyAddr = crypto.PubkeyToAddress(key.PublicKey)
+		key, _  = gmsm.HexToSM2("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
+		keyAddr = gmsm.PubkeyToAddress(key.PublicKey)
 		signer1 = NewEIP2930Signer(big.NewInt(1))
 		signer2 = NewEIP2930Signer(big.NewInt(2))
 		tx0     = NewTx(&AccessListTx{Nonce: 1})
@@ -195,7 +195,7 @@ func TestEIP2718TransactionEncode(t *testing.T) {
 		if err != nil {
 			t.Fatalf("encode error: %v", err)
 		}
-		want := common.FromHex("b86601f8630103018261a894b94f5374fce5edbc8e2a8697c15331677e6ebf0b0a825544c001a0c9519f4f2b30335884581971573fadf60c6204f59a911df35ee8a540456b2660a032f1e8e2c5dd761f9e4f88f41c8310aeaba26a8bfcdacfedfa12ec3862d37521")
+		want := common.FromHex("b86601f8630103018261a894b94f5374fce5edbc8e2a8697c15331677e6ebf0b0a825544c0a0c9519f4f2b30335884581971573fadf60c6204f59a911df35ee8a540456b2660a032f1e8e2c5dd761f9e4f88f41c8310aeaba26a8bfcdacfedfa12ec3862d3752180")
 		if !bytes.Equal(have, want) {
 			t.Errorf("encoded RLP mismatch, got %x", have)
 		}
@@ -206,7 +206,7 @@ func TestEIP2718TransactionEncode(t *testing.T) {
 		if err != nil {
 			t.Fatalf("encode error: %v", err)
 		}
-		want := common.FromHex("01f8630103018261a894b94f5374fce5edbc8e2a8697c15331677e6ebf0b0a825544c001a0c9519f4f2b30335884581971573fadf60c6204f59a911df35ee8a540456b2660a032f1e8e2c5dd761f9e4f88f41c8310aeaba26a8bfcdacfedfa12ec3862d37521")
+		want := common.FromHex("01f8630103018261a894b94f5374fce5edbc8e2a8697c15331677e6ebf0b0a825544c0a0c9519f4f2b30335884581971573fadf60c6204f59a911df35ee8a540456b2660a032f1e8e2c5dd761f9e4f88f41c8310aeaba26a8bfcdacfedfa12ec3862d3752180")
 		if !bytes.Equal(have, want) {
 			t.Errorf("encoded RLP mismatch, got %x", have)
 		}
@@ -219,9 +219,9 @@ func decodeTx(data []byte) (*Transaction, error) {
 	return t, err
 }
 
-func defaultTestKey() (*ecdsa.PrivateKey, common.Address) {
-	key, _ := crypto.HexToECDSA("45a915e4d060149eb4365960e6a7a45f334393093061116b197e3240065ff2d8")
-	addr := crypto.PubkeyToAddress(key.PublicKey)
+func defaultTestKey() (*sm2.PrivateKey, common.Address) {
+	key, _ := gmsm.HexToSM2("45a915e4d060149eb4365960e6a7a45f334393093061116b197e3240065ff2d8")
+	addr := gmsm.PubkeyToAddress(key.PublicKey)
 	return key, addr
 }
 
@@ -273,9 +273,9 @@ func TestTransactionPriceNonceSort1559(t *testing.T) {
 // the same account.
 func testTransactionPriceNonceSort(t *testing.T, baseFee *big.Int) {
 	// Generate a batch of accounts to start with
-	keys := make([]*ecdsa.PrivateKey, 25)
+	keys := make([]*sm2.PrivateKey, 25)
 	for i := 0; i < len(keys); i++ {
-		keys[i], _ = crypto.GenerateKey()
+		keys[i], _ = gmsm.GenerateKey()
 	}
 	signer := LatestSignerForChainID(common.Big1)
 
@@ -283,7 +283,7 @@ func testTransactionPriceNonceSort(t *testing.T, baseFee *big.Int) {
 	groups := map[common.Address]Transactions{}
 	expectedCount := 0
 	for start, key := range keys {
-		addr := crypto.PubkeyToAddress(key.PublicKey)
+		addr := gmsm.PubkeyToAddress(key.PublicKey)
 		count := 25
 		for i := 0; i < 25; i++ {
 			var tx *Transaction
@@ -360,16 +360,16 @@ func testTransactionPriceNonceSort(t *testing.T, baseFee *big.Int) {
 // are prioritized to avoid network spam attacks aiming for a specific ordering.
 func TestTransactionTimeSort(t *testing.T) {
 	// Generate a batch of accounts to start with
-	keys := make([]*ecdsa.PrivateKey, 5)
+	keys := make([]*sm2.PrivateKey, 5)
 	for i := 0; i < len(keys); i++ {
-		keys[i], _ = crypto.GenerateKey()
+		keys[i], _ = gmsm.GenerateKey()
 	}
 	signer := HomesteadSigner{}
 
 	// Generate a batch of transactions with overlapping prices, but different creation times
 	groups := map[common.Address]Transactions{}
 	for start, key := range keys {
-		addr := crypto.PubkeyToAddress(key.PublicKey)
+		addr := gmsm.PubkeyToAddress(key.PublicKey)
 
 		tx, _ := SignTx(NewTransaction(0, common.Address{}, big.NewInt(100), 100, big.NewInt(1), nil), signer, key)
 		tx.time = time.Unix(0, int64(len(keys)-start))
@@ -406,7 +406,7 @@ func TestTransactionTimeSort(t *testing.T) {
 
 // TestTransactionCoding tests serializing/de-serializing to/from rlp and JSON.
 func TestTransactionCoding(t *testing.T) {
-	key, err := crypto.GenerateKey()
+	key, err := gmsm.GenerateKey()
 	if err != nil {
 		t.Fatalf("could not generate key: %v", err)
 	}
@@ -529,4 +529,31 @@ func assertEqual(orig *Transaction, cpy *Transaction) error {
 		}
 	}
 	return nil
+}
+
+func TestNewTransaction(t *testing.T) {
+	key, err := gmsm.GenerateKey()
+	if err != nil {
+		t.Fatalf("could not generate key: %v", err)
+	}
+	addr := gmsm.PubkeyToAddress(key.PublicKey)
+	tx := NewTransaction(0, addr, big.NewInt(100), 10000, big.NewInt(1000), []byte("hello"))
+	m, _ := tx.MarshalJSON()
+	tx2 := Transaction{}
+	err = tx2.UnmarshalJSON(m)
+	if err != nil {
+		t.Fatal(err)
+	}
+	hash := tx.Hash()
+
+	sign, err := gmsm.Sign(hash[:], key)
+	if err != nil {
+		return
+	}
+
+	result := key.Verify(hash[:], sign)
+	if !result {
+		t.Fatalf("invalid signature")
+	}
+	t.Log("result:", result)
 }

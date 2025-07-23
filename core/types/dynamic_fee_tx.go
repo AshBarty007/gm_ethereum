@@ -34,9 +34,10 @@ type DynamicFeeTx struct {
 	AccessList AccessList
 
 	// Signature values
-	V *big.Int `json:"v" gencodec:"required"`
-	R *big.Int `json:"r" gencodec:"required"`
-	S *big.Int `json:"s" gencodec:"required"`
+	//V *big.Int `json:"v" gencodec:"required"`
+	R         *big.Int `json:"r" gencodec:"required"`
+	S         *big.Int `json:"s" gencodec:"required"`
+	PublicKey []byte
 }
 
 // copy creates a deep copy of the transaction data and initializes all fields.
@@ -52,9 +53,10 @@ func (tx *DynamicFeeTx) copy() TxData {
 		ChainID:    new(big.Int),
 		GasTipCap:  new(big.Int),
 		GasFeeCap:  new(big.Int),
-		V:          new(big.Int),
-		R:          new(big.Int),
-		S:          new(big.Int),
+		//V:          new(big.Int),
+		R:         new(big.Int),
+		S:         new(big.Int),
+		PublicKey: common.CopyBytes(tx.PublicKey),
 	}
 	copy(cpy.AccessList, tx.AccessList)
 	if tx.Value != nil {
@@ -69,9 +71,9 @@ func (tx *DynamicFeeTx) copy() TxData {
 	if tx.GasFeeCap != nil {
 		cpy.GasFeeCap.Set(tx.GasFeeCap)
 	}
-	if tx.V != nil {
-		cpy.V.Set(tx.V)
-	}
+	//if tx.V != nil {
+	//	cpy.V.Set(tx.V)
+	//}
 	if tx.R != nil {
 		cpy.R.Set(tx.R)
 	}
@@ -94,10 +96,22 @@ func (tx *DynamicFeeTx) value() *big.Int        { return tx.Value }
 func (tx *DynamicFeeTx) nonce() uint64          { return tx.Nonce }
 func (tx *DynamicFeeTx) to() *common.Address    { return tx.To }
 
-func (tx *DynamicFeeTx) rawSignatureValues() (v, r, s *big.Int) {
-	return tx.V, tx.R, tx.S
+func (tx *DynamicFeeTx) rawSignatureValues() (r, s *big.Int) {
+	return tx.R, tx.S
 }
 
-func (tx *DynamicFeeTx) setSignatureValues(chainID, v, r, s *big.Int) {
-	tx.ChainID, tx.V, tx.R, tx.S = chainID, v, r, s
+func (tx *DynamicFeeTx) setSignatureValues(chainID, r, s *big.Int) {
+	tx.ChainID, tx.R, tx.S = chainID, r, s
+}
+
+func (tx *DynamicFeeTx) getPublicKey() []byte {
+	return tx.PublicKey
+}
+
+func (tx *DynamicFeeTx) setPublicKey(pubKey []byte) {
+	tx.PublicKey = pubKey
+}
+
+func (tx *DynamicFeeTx) setChainId(chainID *big.Int) {
+	tx.ChainID = chainID
 }

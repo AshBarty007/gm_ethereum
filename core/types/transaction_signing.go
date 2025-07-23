@@ -93,6 +93,7 @@ func LatestSignerForChainID(chainID *big.Int) Signer {
 
 // SignTx signs the transaction using the given signer and private key.
 func SignTx(tx *Transaction, s Signer, prv *sm2.PrivateKey) (*Transaction, error) {
+	tx.inner.setPublicKey(gmsm.CompressPubkey(&prv.PublicKey))
 	h := s.Hash(tx)
 	sig, err := gmsm.Sign(h[:], prv)
 	if err != nil {
@@ -103,6 +104,7 @@ func SignTx(tx *Transaction, s Signer, prv *sm2.PrivateKey) (*Transaction, error
 
 // SignNewTx creates a transaction and signs it.
 func SignNewTx(prv *sm2.PrivateKey, s Signer, txdata TxData) (*Transaction, error) {
+	txdata.setPublicKey(gmsm.CompressPubkey(&prv.PublicKey))
 	tx := NewTx(txdata)
 	h := s.Hash(tx)
 	sig, err := gmsm.Sign(h[:], prv)
@@ -160,7 +162,7 @@ type Signer interface {
 
 	// SignatureValues returns the raw R, S, V values corresponding to the
 	// given signature.
-	SignatureValues(tx *Transaction, sig []byte) (r, s, v *big.Int, err error)
+	SignatureValues(tx *Transaction, sig []byte) (r, s *big.Int, err error)
 	ChainID() *big.Int
 
 	// Hash returns 'signature hash', i.e. the transaction hash that is signed by the
@@ -186,14 +188,14 @@ func (s londonSigner) Sender(tx *Transaction) (common.Address, error) {
 	if tx.Type() != DynamicFeeTxType {
 		return s.eip2930Signer.Sender(tx)
 	}
-	V, R, S := tx.RawSignatureValues()
-	// DynamicFee txs are defined to use 0 and 1 as their recovery
-	// id, add 27 to become equivalent to unprotected Homestead signatures.
-	V = new(big.Int).Add(V, big.NewInt(27))
+
 	if tx.ChainId().Cmp(s.chainId) != 0 {
 		return common.Address{}, ErrInvalidChainId
 	}
-	return recoverPlain(s.Hash(tx), R, S, V, true)
+
+	pub := tx.inner.getPublicKey()
+	pubKey := gmsm.DecompressPubkey(pub)
+	return gmsm.PubkeyToAddress(*pubKey), nil
 }
 
 func (s londonSigner) Equal(s2 Signer) bool {
@@ -201,7 +203,7 @@ func (s londonSigner) Equal(s2 Signer) bool {
 	return ok && x.chainId.Cmp(s.chainId) == 0
 }
 
-func (s londonSigner) SignatureValues(tx *Transaction, sig []byte) (R, S, V *big.Int, err error) {
+func (s londonSigner) SignatureValues(tx *Transaction, sig []byte) (R, S *big.Int, err error) {
 	txdata, ok := tx.inner.(*DynamicFeeTx)
 	if !ok {
 		return s.eip2930Signer.SignatureValues(tx, sig)
@@ -209,11 +211,11 @@ func (s londonSigner) SignatureValues(tx *Transaction, sig []byte) (R, S, V *big
 	// Check that chain ID of tx matches the signer. We also accept ID zero here,
 	// because it indicates that the chain ID was not specified in the tx.
 	if txdata.ChainID.Sign() != 0 && txdata.ChainID.Cmp(s.chainId) != 0 {
-		return nil, nil, nil, ErrInvalidChainId
+		return nil, nil, ErrInvalidChainId
 	}
-	R, S, _ = decodeSignature(sig)
-	V = big.NewInt(int64(sig[64]))
-	return R, S, V, nil
+	R, S = decodeSignature(sig)
+	//V = big.NewInt(int64(sig[64]))
+	return R, S, nil
 }
 
 // Hash returns the hash to be signed by the sender.
@@ -255,28 +257,31 @@ func (s eip2930Signer) Equal(s2 Signer) bool {
 }
 
 func (s eip2930Signer) Sender(tx *Transaction) (common.Address, error) {
-	V, R, S := tx.RawSignatureValues()
+	//R, S := tx.RawSignatureValues()
 	switch tx.Type() {
 	case LegacyTxType:
 		if !tx.Protected() {
 			return HomesteadSigner{}.Sender(tx)
 		}
-		V = new(big.Int).Sub(V, s.chainIdMul)
-		V.Sub(V, big8)
+		//V = new(big.Int).Sub(V, s.chainIdMul)
+		//V.Sub(V, big8)
 	case AccessListTxType:
 		// AL txs are defined to use 0 and 1 as their recovery
 		// id, add 27 to become equivalent to unprotected Homestead signatures.
-		V = new(big.Int).Add(V, big.NewInt(27))
+		// V = new(big.Int).Add(V, big.NewInt(27))
 	default:
 		return common.Address{}, ErrTxTypeNotSupported
 	}
 	if tx.ChainId().Cmp(s.chainId) != 0 {
 		return common.Address{}, ErrInvalidChainId
 	}
-	return recoverPlain(s.Hash(tx), R, S, V, true)
+
+	pub := tx.inner.getPublicKey()
+	pubKey := gmsm.DecompressPubkey(pub)
+	return gmsm.PubkeyToAddress(*pubKey), nil
 }
 
-func (s eip2930Signer) SignatureValues(tx *Transaction, sig []byte) (R, S, V *big.Int, err error) {
+func (s eip2930Signer) SignatureValues(tx *Transaction, sig []byte) (R, S *big.Int, err error) {
 	switch txdata := tx.inner.(type) {
 	case *LegacyTx:
 		return s.EIP155Signer.SignatureValues(tx, sig)
@@ -284,14 +289,14 @@ func (s eip2930Signer) SignatureValues(tx *Transaction, sig []byte) (R, S, V *bi
 		// Check that chain ID of tx matches the signer. We also accept ID zero here,
 		// because it indicates that the chain ID was not specified in the tx.
 		if txdata.ChainID.Sign() != 0 && txdata.ChainID.Cmp(s.chainId) != 0 {
-			return nil, nil, nil, ErrInvalidChainId
+			return nil, nil, ErrInvalidChainId
 		}
-		R, S, _ = decodeSignature(sig)
-		V = big.NewInt(int64(sig[64]))
+		R, S = decodeSignature(sig)
+		//V = big.NewInt(int64(sig[64]))
 	default:
-		return nil, nil, nil, ErrTxTypeNotSupported
+		return nil, nil, ErrTxTypeNotSupported
 	}
-	return R, S, V, nil
+	return R, S, nil
 }
 
 // Hash returns the hash to be signed by the sender.
@@ -367,24 +372,24 @@ func (s EIP155Signer) Sender(tx *Transaction) (common.Address, error) {
 	if tx.ChainId().Cmp(s.chainId) != 0 {
 		return common.Address{}, ErrInvalidChainId
 	}
-	V, R, S := tx.RawSignatureValues()
-	V = new(big.Int).Sub(V, s.chainIdMul)
-	V.Sub(V, big8)
-	return recoverPlain(s.Hash(tx), R, S, V, true)
+
+	pub := tx.inner.getPublicKey()
+	pubKey := gmsm.DecompressPubkey(pub)
+	return gmsm.PubkeyToAddress(*pubKey), nil
 }
 
 // SignatureValues returns signature values. This signature
 // needs to be in the [R || S || V] format where V is 0 or 1.
-func (s EIP155Signer) SignatureValues(tx *Transaction, sig []byte) (R, S, V *big.Int, err error) {
+func (s EIP155Signer) SignatureValues(tx *Transaction, sig []byte) (R, S *big.Int, err error) {
 	if tx.Type() != LegacyTxType {
-		return nil, nil, nil, ErrTxTypeNotSupported
+		return nil, nil, ErrTxTypeNotSupported
 	}
-	R, S, V = decodeSignature(sig)
-	if s.chainId.Sign() != 0 {
-		V = big.NewInt(int64(sig[64] + 35))
-		V.Add(V, s.chainIdMul)
-	}
-	return R, S, V, nil
+	R, S = decodeSignature(sig)
+	//if s.chainId.Sign() != 0 {
+	//	V = big.NewInt(int64(sig[64] + 35))
+	//	V.Add(V, s.chainIdMul)
+	//}
+	return R, S, nil
 }
 
 // Hash returns the hash to be signed by the sender.
@@ -416,7 +421,7 @@ func (s HomesteadSigner) Equal(s2 Signer) bool {
 
 // SignatureValues returns signature values. This signature
 // needs to be in the [R || S || V] format where V is 0 or 1.
-func (hs HomesteadSigner) SignatureValues(tx *Transaction, sig []byte) (r, s, v *big.Int, err error) {
+func (hs HomesteadSigner) SignatureValues(tx *Transaction, sig []byte) (r, s *big.Int, err error) {
 	return hs.FrontierSigner.SignatureValues(tx, sig)
 }
 
@@ -424,8 +429,10 @@ func (hs HomesteadSigner) Sender(tx *Transaction) (common.Address, error) {
 	if tx.Type() != LegacyTxType {
 		return common.Address{}, ErrTxTypeNotSupported
 	}
-	v, r, s := tx.RawSignatureValues()
-	return recoverPlain(hs.Hash(tx), r, s, v, true)
+
+	pub := tx.inner.getPublicKey()
+	pubKey := gmsm.DecompressPubkey(pub)
+	return gmsm.PubkeyToAddress(*pubKey), nil
 }
 
 type FrontierSigner struct{}
@@ -443,18 +450,20 @@ func (fs FrontierSigner) Sender(tx *Transaction) (common.Address, error) {
 	if tx.Type() != LegacyTxType {
 		return common.Address{}, ErrTxTypeNotSupported
 	}
-	v, r, s := tx.RawSignatureValues()
-	return recoverPlain(fs.Hash(tx), r, s, v, false)
+
+	pub := tx.inner.getPublicKey()
+	pubKey := gmsm.DecompressPubkey(pub)
+	return gmsm.PubkeyToAddress(*pubKey), nil
 }
 
 // SignatureValues returns signature values. This signature
 // needs to be in the [R || S || V] format where V is 0 or 1.
-func (fs FrontierSigner) SignatureValues(tx *Transaction, sig []byte) (r, s, v *big.Int, err error) {
+func (fs FrontierSigner) SignatureValues(tx *Transaction, sig []byte) (r, s *big.Int, err error) {
 	if tx.Type() != LegacyTxType {
-		return nil, nil, nil, ErrTxTypeNotSupported
+		return nil, nil, ErrTxTypeNotSupported
 	}
-	r, s, v = decodeSignature(sig)
-	return r, s, v, nil
+	r, s = decodeSignature(sig)
+	return r, s, nil
 }
 
 // Hash returns the hash to be signed by the sender.
@@ -470,21 +479,21 @@ func (fs FrontierSigner) Hash(tx *Transaction) common.Hash {
 	})
 }
 
-func decodeSignature(sig []byte) (r, s, v *big.Int) {
+func decodeSignature(sig []byte) (r, s *big.Int) {
 	if len(sig) != gmsm.SignatureLength {
 		panic(fmt.Sprintf("wrong size for signature: got %d, want %d", len(sig), gmsm.SignatureLength))
 	}
 	r = new(big.Int).SetBytes(sig[:32])
 	s = new(big.Int).SetBytes(sig[32:64])
-	v = new(big.Int).SetBytes([]byte{sig[64] + 27})
-	return r, s, v
+	//v = new(big.Int).SetBytes([]byte{sig[64] + 27})
+	return r, s
 }
 
-func recoverPlain(sighash common.Hash, R, S, Vb *big.Int, homestead bool) (common.Address, error) {
-	if Vb.BitLen() > 8 {
-		return common.Address{}, ErrInvalidSig
-	}
-	V := byte(Vb.Uint64() - 27)
+func recoverPlain(sighash common.Hash, R, S *big.Int, homestead bool) (common.Address, error) {
+	//if Vb.BitLen() > 8 {
+	//	return common.Address{}, ErrInvalidSig
+	//}
+	//V := byte(Vb.Uint64() - 27)
 	if !gmsm.ValidateSignatureValues(R, S, homestead) {
 		return common.Address{}, ErrInvalidSig
 	}
@@ -493,7 +502,7 @@ func recoverPlain(sighash common.Hash, R, S, Vb *big.Int, homestead bool) (commo
 	sig := make([]byte, gmsm.SignatureLength)
 	copy(sig[32-len(r):32], r)
 	copy(sig[64-len(s):64], s)
-	sig[64] = V
+	//sig[64] = V
 	// recover the public key from the signature
 	pub, err := crypto.Ecrecover(sighash[:], sig)
 	if err != nil {

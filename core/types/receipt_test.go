@@ -18,13 +18,13 @@ package types
 
 import (
 	"bytes"
+	"github.com/ethereum/go-ethereum/gmsm"
 	"math"
 	"math/big"
 	"reflect"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rlp"
 )
@@ -312,7 +312,7 @@ func TestDeriveFields(t *testing.T) {
 			t.Errorf("receipts[%d].ContractAddress = %s, want %s", i, receipts[i].ContractAddress.String(), (common.Address{}).String())
 		}
 		from, _ := Sender(signer, txs[i])
-		contractAddress := crypto.CreateAddress(from, txs[i].Nonce())
+		contractAddress := gmsm.CreateAddress(from, txs[i].Nonce())
 		if txs[i].To() == nil && receipts[i].ContractAddress != contractAddress {
 			t.Errorf("receipts[%d].ContractAddress = %s, want %s", i, receipts[i].ContractAddress.String(), contractAddress.String())
 		}

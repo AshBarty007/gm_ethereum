@@ -18,11 +18,11 @@ package types
 
 import (
 	"fmt"
+	"github.com/ethereum/go-ethereum/gmsm"
 	"math/big"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
 )
 
 func TestBloom(t *testing.T) {
@@ -64,13 +64,13 @@ func TestBloomExtensively(t *testing.T) {
 		b.Add([]byte(data))
 		//b.Add(new(big.Int).SetBytes([]byte(data)))
 	}
-	got := crypto.Keccak256Hash(b.Bytes())
+	got := gmsm.SM3Hash(b.Bytes())
 	if got != exp {
 		t.Errorf("Got %x, exp %x", got, exp)
 	}
 	var b2 Bloom
 	b2.SetBytes(b.Bytes())
-	got2 := crypto.Keccak256Hash(b2.Bytes())
+	got2 := gmsm.SM3Hash(b2.Bytes())
 	if got != got2 {
 		t.Errorf("Got %x, exp %x", got, got2)
 	}
@@ -134,7 +134,7 @@ func BenchmarkCreateBloom(b *testing.B) {
 		}
 		b.StopTimer()
 		var exp = common.HexToHash("c384c56ece49458a427c67b90fefe979ebf7104795be65dc398b280f24104949")
-		got := crypto.Keccak256Hash(bl.Bytes())
+		got := gmsm.SM3Hash(bl.Bytes())
 		if got != exp {
 			b.Errorf("Got %x, exp %x", got, exp)
 		}
@@ -147,7 +147,7 @@ func BenchmarkCreateBloom(b *testing.B) {
 		}
 		b.StopTimer()
 		var exp = common.HexToHash("c384c56ece49458a427c67b90fefe979ebf7104795be65dc398b280f24104949")
-		got := crypto.Keccak256Hash(bl.Bytes())
+		got := gmsm.SM3Hash(bl.Bytes())
 		if got != exp {
 			b.Errorf("Got %x, exp %x", got, exp)
 		}

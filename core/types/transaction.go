@@ -83,8 +83,10 @@ type TxData interface {
 	nonce() uint64
 	to() *common.Address
 
-	rawSignatureValues() (v, r, s *big.Int)
-	setSignatureValues(chainID, v, r, s *big.Int)
+	rawSignatureValues() (r, s *big.Int)
+	setSignatureValues(chainID, r, s *big.Int)
+	getPublicKey() []byte
+	setPublicKey([]byte)
 }
 
 // EncodeRLP implements rlp.Encoder
@@ -198,7 +200,7 @@ func (tx *Transaction) setDecoded(inner TxData, size int) {
 	}
 }
 
-func sanityCheckSignature(v *big.Int, r *big.Int, s *big.Int, maybeProtected bool) error {
+func sanityCheckSignature(r *big.Int, s *big.Int, maybeProtected bool) error {
 	//if isProtectedV(v) && !maybeProtected {
 	//	return ErrUnexpectedProtection
 	//}
@@ -235,12 +237,13 @@ func isProtectedV(V *big.Int) bool {
 
 // Protected says whether the transaction is replay-protected.
 func (tx *Transaction) Protected() bool {
-	switch tx := tx.inner.(type) {
-	case *LegacyTx:
-		return tx.V != nil && isProtectedV(tx.V)
-	default:
-		return true
-	}
+	//switch tx := tx.inner.(type) {
+	//case *LegacyTx:
+	//	return tx.V != nil && isProtectedV(tx.V)
+	//default:
+	//	return true
+	//}
+	return true
 }
 
 // Type returns the transaction type.
@@ -294,7 +297,7 @@ func (tx *Transaction) Cost() *big.Int {
 
 // RawSignatureValues returns the V, R, S signature values of the transaction.
 // The return values should not be modified by the caller.
-func (tx *Transaction) RawSignatureValues() (v, r, s *big.Int) {
+func (tx *Transaction) RawSignatureValues() (r, s *big.Int) {
 	return tx.inner.rawSignatureValues()
 }
 
@@ -387,12 +390,12 @@ func (tx *Transaction) Size() common.StorageSize {
 // WithSignature returns a new transaction with the given signature.
 // This signature needs to be in the [R || S || V] format where V is 0 or 1.
 func (tx *Transaction) WithSignature(signer Signer, sig []byte) (*Transaction, error) {
-	r, s, v, err := signer.SignatureValues(tx, sig)
+	r, s, err := signer.SignatureValues(tx, sig)
 	if err != nil {
 		return nil, err
 	}
 	cpy := tx.inner.copy()
-	cpy.setSignatureValues(signer.ChainID(), v, r, s)
+	cpy.setSignatureValues(signer.ChainID(), r, s)
 	return &Transaction{inner: cpy, time: tx.time}, nil
 }
 

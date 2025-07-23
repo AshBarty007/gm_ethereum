@@ -1,6 +1,3 @@
-//go:build !nacl && !js && cgo && !gofuzz
-// +build !nacl,!js,cgo,!gofuzz
-
 package gmsm
 
 import "C"
@@ -42,17 +39,4 @@ func SigToPub(hash, sig []byte) (*sm2.PublicKey, error) {
 
 	x, y := elliptic.Unmarshal(P256Sm2(), s)
 	return &sm2.PublicKey{Curve: P256Sm2(), X: x, Y: y}, nil
-}
-
-func VerifySignature(pubkey, digestHash, signature []byte) bool {
-	publicKey := DecompressPubkey(pubkey) //pubkey是不是压缩公钥
-	return publicKey.Verify(digestHash, signature)
-}
-
-func DecompressPubkey(pubkey []byte) *sm2.PublicKey {
-	return sm2.Decompress(pubkey)
-}
-
-func CompressPubkey(pubkey *sm2.PublicKey) []byte {
-	return sm2.Compress(pubkey)
 }

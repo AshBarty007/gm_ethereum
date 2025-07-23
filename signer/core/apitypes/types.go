@@ -158,6 +158,7 @@ func (args *SendTxArgs) ToTransaction() *types.Transaction {
 	default:
 		data = &types.LegacyTx{
 			To:       to,
+			ChainID:  (*big.Int)(args.ChainID),
 			Nonce:    uint64(args.Nonce),
 			Gas:      uint64(args.Gas),
 			GasPrice: (*big.Int)(args.GasPrice),

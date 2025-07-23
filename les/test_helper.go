@@ -55,6 +55,7 @@ import (
 
 var (
 	bankKey, _ = gmsm.GenerateKey()
+	bankPubKey = gmsm.CompressPubkey(&bankKey.PublicKey)
 	bankAddr   = gmsm.PubkeyToAddress(bankKey.PublicKey)
 	bankFunds  = big.NewInt(1_000_000_000_000_000_000)
 

@@ -27,9 +27,6 @@ import (
 	"io"
 	"math/big"
 
-	"golang.org/x/crypto/cryptobyte"
-	cbasn1 "golang.org/x/crypto/cryptobyte/asn1"
-
 	"github.com/ethereum/go-ethereum/gmsm/sm3"
 )
 
@@ -72,27 +69,33 @@ func (priv *PrivateKey) Sign(random io.Reader, msg []byte, signer crypto.SignerO
 	if err != nil {
 		return nil, err
 	}
-	var b cryptobyte.Builder
-	b.AddASN1(cbasn1.SEQUENCE, func(b *cryptobyte.Builder) {
-		b.AddASN1BigInt(r)
-		b.AddASN1BigInt(s)
-	})
-	return b.Bytes()
+	//var b cryptobyte.Builder
+	//b.AddASN1(cbasn1.SEQUENCE, func(b *cryptobyte.Builder) {
+	//	b.AddASN1BigInt(r)
+	//	b.AddASN1BigInt(s)
+	//})
+
+	var rawSignature [64]byte
+	r.FillBytes(rawSignature[0:32])  // r 占用前32字节
+	s.FillBytes(rawSignature[32:64]) // s 占用后32字节
+	return rawSignature[:], nil
 }
 
 func (pub *PublicKey) Verify(msg []byte, sig []byte) bool {
 	var (
-		r, s  = &big.Int{}, &big.Int{}
-		inner cryptobyte.String
+		r, s = &big.Int{}, &big.Int{}
+		//inner cryptobyte.String
 	)
-	input := cryptobyte.String(sig)
-	if !input.ReadASN1(&inner, cbasn1.SEQUENCE) ||
-		!input.Empty() ||
-		!inner.ReadASN1Integer(r) ||
-		!inner.ReadASN1Integer(s) ||
-		!inner.Empty() {
-		return false
-	}
+	//input := cryptobyte.String(sig)
+	//if !input.ReadASN1(&inner, cbasn1.SEQUENCE) ||
+	//	!input.Empty() ||
+	//	!inner.ReadASN1Integer(r) ||
+	//	!inner.ReadASN1Integer(s) ||
+	//	!inner.Empty() {
+	//	return false
+	//}
+	r = new(big.Int).SetBytes(sig[:32])
+	s = new(big.Int).SetBytes(sig[32:64])
 	return Sm2Verify(pub, msg, default_uid, r, s)
 }
 

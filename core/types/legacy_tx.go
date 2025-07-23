@@ -24,13 +24,15 @@ import (
 
 // LegacyTx is the transaction data of regular Ethereum transactions.
 type LegacyTx struct {
-	Nonce    uint64          // nonce of sender account
-	GasPrice *big.Int        // wei per gas
-	Gas      uint64          // gas limit
-	To       *common.Address `rlp:"nil"` // nil means contract creation
-	Value    *big.Int        // wei amount
-	Data     []byte          // contract invocation input data
-	V, R, S  *big.Int        // signature values
+	ChainID   *big.Int
+	Nonce     uint64          // nonce of sender account
+	GasPrice  *big.Int        // wei per gas
+	Gas       uint64          // gas limit
+	To        *common.Address `rlp:"nil"` // nil means contract creation
+	Value     *big.Int        // wei amount
+	Data      []byte          // contract invocation input data
+	R, S      *big.Int        // signature values
+	PublicKey []byte
 }
 
 // NewTransaction creates an unsigned legacy transaction.
@@ -68,9 +70,11 @@ func (tx *LegacyTx) copy() TxData {
 		// These are initialized below.
 		Value:    new(big.Int),
 		GasPrice: new(big.Int),
-		V:        new(big.Int),
-		R:        new(big.Int),
-		S:        new(big.Int),
+		//V:        new(big.Int),
+		R:         new(big.Int),
+		S:         new(big.Int),
+		ChainID:   tx.ChainID,
+		PublicKey: common.CopyBytes(tx.PublicKey),
 	}
 	if tx.Value != nil {
 		cpy.Value.Set(tx.Value)
@@ -78,9 +82,9 @@ func (tx *LegacyTx) copy() TxData {
 	if tx.GasPrice != nil {
 		cpy.GasPrice.Set(tx.GasPrice)
 	}
-	if tx.V != nil {
-		cpy.V.Set(tx.V)
-	}
+	//if tx.V != nil {
+	//	cpy.V.Set(tx.V)
+	//}
 	if tx.R != nil {
 		cpy.R.Set(tx.R)
 	}
@@ -91,8 +95,13 @@ func (tx *LegacyTx) copy() TxData {
 }
 
 // accessors for innerTx.
-func (tx *LegacyTx) txType() byte           { return LegacyTxType }
-func (tx *LegacyTx) chainID() *big.Int      { return deriveChainId(tx.V) }
+func (tx *LegacyTx) txType() byte { return LegacyTxType }
+func (tx *LegacyTx) chainID() *big.Int {
+	if tx.ChainID == nil {
+		return new(big.Int) //params.MainnetChainConfig.ChainID
+	}
+	return tx.ChainID
+}
 func (tx *LegacyTx) accessList() AccessList { return nil }
 func (tx *LegacyTx) data() []byte           { return tx.Data }
 func (tx *LegacyTx) gas() uint64            { return tx.Gas }
@@ -103,10 +112,18 @@ func (tx *LegacyTx) value() *big.Int        { return tx.Value }
 func (tx *LegacyTx) nonce() uint64          { return tx.Nonce }
 func (tx *LegacyTx) to() *common.Address    { return tx.To }
 
-func (tx *LegacyTx) rawSignatureValues() (v, r, s *big.Int) {
-	return tx.V, tx.R, tx.S
+func (tx *LegacyTx) rawSignatureValues() (r, s *big.Int) {
+	return tx.R, tx.S
 }
 
-func (tx *LegacyTx) setSignatureValues(chainID, v, r, s *big.Int) {
-	tx.V, tx.R, tx.S = v, r, s
+func (tx *LegacyTx) setSignatureValues(chainID, r, s *big.Int) {
+	tx.ChainID, tx.R, tx.S = chainID, r, s
+}
+
+func (tx *LegacyTx) getPublicKey() []byte {
+	return tx.PublicKey
+}
+
+func (tx *LegacyTx) setPublicKey(pubKey []byte) {
+	tx.PublicKey = pubKey
 }

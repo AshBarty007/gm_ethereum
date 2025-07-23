@@ -18,6 +18,7 @@ package core
 
 import (
 	"encoding/json"
+	"github.com/ethereum/go-ethereum/gmsm"
 	"math/big"
 	"runtime"
 	"testing"
@@ -31,7 +32,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
 )
 
@@ -98,12 +98,12 @@ func testHeaderVerificationForMerging(t *testing.T, isClique bool) {
 	)
 	if isClique {
 		var (
-			key, _ = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
-			addr   = crypto.PubkeyToAddress(key.PublicKey)
+			key, _ = gmsm.HexToSM2("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
+			addr   = gmsm.PubkeyToAddress(key.PublicKey)
 			engine = clique.New(params.AllCliqueProtocolChanges.Clique, testdb)
 		)
 		genspec := &Genesis{
-			ExtraData: make([]byte, 32+common.AddressLength+crypto.SignatureLength),
+			ExtraData: make([]byte, 32+common.AddressLength+gmsm.SignatureLength),
 			Alloc: map[common.Address]GenesisAccount{
 				addr: {Balance: big.NewInt(1)},
 			},
@@ -121,11 +121,11 @@ func testHeaderVerificationForMerging(t *testing.T, isClique bool) {
 			if i > 0 {
 				header.ParentHash = preBlocks[i-1].Hash()
 			}
-			header.Extra = make([]byte, 32+crypto.SignatureLength)
+			header.Extra = make([]byte, 32+gmsm.SignatureLength)
 			header.Difficulty = big.NewInt(2)
 
-			sig, _ := crypto.Sign(genEngine.SealHash(header).Bytes(), key)
-			copy(header.Extra[len(header.Extra)-crypto.SignatureLength:], sig)
+			sig, _ := gmsm.Sign(genEngine.SealHash(header).Bytes(), key)
+			copy(header.Extra[len(header.Extra)-gmsm.SignatureLength:], sig)
 			preBlocks[i] = block.WithSeal(header)
 			// calculate td
 			td += int(block.Difficulty().Uint64())

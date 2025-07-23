@@ -17,7 +17,9 @@
 package core
 
 import (
-	"crypto/ecdsa"
+	"github.com/ethereum/go-ethereum/gmsm"
+	"github.com/ethereum/go-ethereum/gmsm/sm2"
+	"github.com/ethereum/go-ethereum/gmsm/sm3"
 	"math/big"
 	"testing"
 
@@ -29,10 +31,8 @@ import (
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/trie"
-	"golang.org/x/crypto/sha3"
 )
 
 // TestStateProcessorErrors tests the output from the 'core' errors
@@ -57,10 +57,10 @@ func TestStateProcessorErrors(t *testing.T) {
 			Ethash:              new(params.EthashConfig),
 		}
 		signer  = types.LatestSigner(config)
-		key1, _ = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
-		key2, _ = crypto.HexToECDSA("0202020202020202020202020202020202020202020202020202002020202020")
+		key1, _ = gmsm.HexToSM2("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
+		key2, _ = gmsm.HexToSM2("0202020202020202020202020202020202020202020202020202002020202020")
 	)
-	var makeTx = func(key *ecdsa.PrivateKey, nonce uint64, to common.Address, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte) *types.Transaction {
+	var makeTx = func(key *sm2.PrivateKey, nonce uint64, to common.Address, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte) *types.Transaction {
 		tx, _ := types.SignTx(types.NewTransaction(nonce, to, amount, gasLimit, gasPrice, data), signer, key)
 		return tx
 	}
@@ -324,7 +324,7 @@ func GenerateBadBlock(parent *types.Block, engine consensus.Engine, txs types.Tr
 	var receipts []*types.Receipt
 	// The post-state result doesn't need to be correct (this is a bad block), but we do need something there
 	// Preferably something unique. So let's use a combo of blocknum + txhash
-	hasher := sha3.NewLegacyKeccak256()
+	hasher := sm3.New()
 	hasher.Write(header.Number.Bytes())
 	var cumulativeGas uint64
 	for _, tx := range txs {

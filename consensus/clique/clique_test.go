@@ -17,6 +17,7 @@
 package clique
 
 import (
+	"github.com/ethereum/go-ethereum/gmsm"
 	"math/big"
 	"testing"
 
@@ -25,7 +26,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
 )
 
@@ -39,8 +39,8 @@ func TestReimportMirroredState(t *testing.T) {
 	// Initialize a Clique chain with a single signer
 	var (
 		db     = rawdb.NewMemoryDatabase()
-		key, _ = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
-		addr   = crypto.PubkeyToAddress(key.PublicKey)
+		key, _ = gmsm.HexToSM2("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
+		addr   = gmsm.PubkeyToAddress(key.PublicKey)
 		engine = New(params.AllCliqueProtocolChanges.Clique, db)
 		signer = new(types.HomesteadSigner)
 	)
@@ -81,7 +81,7 @@ func TestReimportMirroredState(t *testing.T) {
 		header.Extra = make([]byte, extraVanity+extraSeal)
 		header.Difficulty = diffInTurn
 
-		sig, _ := crypto.Sign(SealHash(header).Bytes(), key)
+		sig, _ := gmsm.Sign(SealHash(header).Bytes(), key)
 		copy(header.Extra[len(header.Extra)-extraSeal:], sig)
 		blocks[i] = block.WithSeal(header)
 	}

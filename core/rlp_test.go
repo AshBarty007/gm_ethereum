@@ -18,6 +18,8 @@ package core
 
 import (
 	"fmt"
+	"github.com/ethereum/go-ethereum/gmsm"
+	"github.com/ethereum/go-ethereum/gmsm/sm3"
 	"math/big"
 	"testing"
 
@@ -25,10 +27,8 @@ import (
 	"github.com/ethereum/go-ethereum/consensus/ethash"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rlp"
-	"golang.org/x/crypto/sha3"
 )
 
 func getBlock(transactions int, uncles int, dataSize int) *types.Block {
@@ -38,8 +38,8 @@ func getBlock(transactions int, uncles int, dataSize int) *types.Block {
 		engine = ethash.NewFaker()
 		db     = rawdb.NewMemoryDatabase()
 		// A sender who makes transactions, has some funds
-		key, _  = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
-		address = crypto.PubkeyToAddress(key.PublicKey)
+		key, _  = gmsm.HexToSM2("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
+		address = gmsm.PubkeyToAddress(key.PublicKey)
 		funds   = big.NewInt(1_000_000_000_000_000_000)
 		gspec   = &Genesis{
 			Config: params.TestChainConfig,
@@ -112,7 +112,7 @@ func testRlpIterator(t *testing.T, txs, uncles, datasize int) {
 	var gotHashes []common.Hash
 	var expHashes []common.Hash
 	for txIt.Next() {
-		gotHashes = append(gotHashes, crypto.Keccak256Hash(txIt.Value()))
+		gotHashes = append(gotHashes, gmsm.SM3Hash(txIt.Value()))
 	}
 
 	var expBody types.Body
@@ -151,7 +151,7 @@ func BenchmarkHashing(b *testing.B) {
 		blockRlp, _ = rlp.EncodeToBytes(block)
 	}
 	var got common.Hash
-	var hasher = sha3.NewLegacyKeccak256()
+	var hasher = sm3.New()
 	b.Run("iteratorhashing", func(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {

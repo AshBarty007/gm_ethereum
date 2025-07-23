@@ -52,7 +52,8 @@ type AccessListTx struct {
 	Value      *big.Int        // wei amount
 	Data       []byte          // contract invocation input data
 	AccessList AccessList      // EIP-2930 access list
-	V, R, S    *big.Int        // signature values
+	R, S       *big.Int        // signature values
+	PublicKey  []byte
 }
 
 // copy creates a deep copy of the transaction data and initializes all fields.
@@ -67,9 +68,10 @@ func (tx *AccessListTx) copy() TxData {
 		Value:      new(big.Int),
 		ChainID:    new(big.Int),
 		GasPrice:   new(big.Int),
-		V:          new(big.Int),
-		R:          new(big.Int),
-		S:          new(big.Int),
+		//V:          new(big.Int),
+		R:         new(big.Int),
+		S:         new(big.Int),
+		PublicKey: common.CopyBytes(tx.PublicKey),
 	}
 	copy(cpy.AccessList, tx.AccessList)
 	if tx.Value != nil {
@@ -81,9 +83,9 @@ func (tx *AccessListTx) copy() TxData {
 	if tx.GasPrice != nil {
 		cpy.GasPrice.Set(tx.GasPrice)
 	}
-	if tx.V != nil {
-		cpy.V.Set(tx.V)
-	}
+	//if tx.V != nil {
+	//	cpy.V.Set(tx.V)
+	//}
 	if tx.R != nil {
 		cpy.R.Set(tx.R)
 	}
@@ -106,10 +108,18 @@ func (tx *AccessListTx) value() *big.Int        { return tx.Value }
 func (tx *AccessListTx) nonce() uint64          { return tx.Nonce }
 func (tx *AccessListTx) to() *common.Address    { return tx.To }
 
-func (tx *AccessListTx) rawSignatureValues() (v, r, s *big.Int) {
-	return tx.V, tx.R, tx.S
+func (tx *AccessListTx) rawSignatureValues() (r, s *big.Int) {
+	return tx.R, tx.S
 }
 
-func (tx *AccessListTx) setSignatureValues(chainID, v, r, s *big.Int) {
-	tx.ChainID, tx.V, tx.R, tx.S = chainID, v, r, s
+func (tx *AccessListTx) setSignatureValues(chainID, r, s *big.Int) {
+	tx.ChainID, tx.R, tx.S = chainID, r, s
+}
+
+func (tx *AccessListTx) getPublicKey() []byte {
+	return tx.PublicKey
+}
+
+func (tx *AccessListTx) setPublicKey(pubKey []byte) {
+	tx.PublicKey = pubKey
 }

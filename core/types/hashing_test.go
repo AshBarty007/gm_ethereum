@@ -19,6 +19,7 @@ package types_test
 import (
 	"bytes"
 	"fmt"
+	"github.com/ethereum/go-ethereum/gmsm"
 	"io"
 	"math/big"
 	mrand "math/rand"
@@ -28,7 +29,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/trie"
 )
@@ -144,11 +144,11 @@ func TestDerivableList(t *testing.T) {
 }
 
 func genTxs(num uint64) (types.Transactions, error) {
-	key, err := crypto.HexToECDSA("deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef")
+	key, err := gmsm.HexToSM2("deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef")
 	if err != nil {
 		return nil, err
 	}
-	var addr = crypto.PubkeyToAddress(key.PublicKey)
+	var addr = gmsm.PubkeyToAddress(key.PublicKey)
 	newTx := func(i uint64) (*types.Transaction, error) {
 		signer := types.NewEIP155Signer(big.NewInt(18))
 		utx := types.NewTransaction(i, addr, new(big.Int), 0, new(big.Int).SetUint64(10000000), nil)

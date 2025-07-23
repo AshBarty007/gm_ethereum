@@ -17,11 +17,11 @@
 package types
 
 import (
+	"github.com/ethereum/go-ethereum/gmsm"
 	"math/big"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
@@ -41,7 +41,7 @@ func BenchmarkDecodeRLP(b *testing.B) {
 }
 
 func benchRLP(b *testing.B, encode bool) {
-	key, _ := crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
+	key, _ := gmsm.HexToSM2("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
 	to := common.HexToAddress("0x00000000000000000000000000000000deadbeef")
 	signer := NewLondonSigner(big.NewInt(1337))
 	for _, tc := range []struct {

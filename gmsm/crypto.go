@@ -19,10 +19,10 @@ import (
 )
 
 // SignatureLength indicates the byte length required to carry a signature with recovery id.
-const SignatureLength = 71 + 1
+const SignatureLength = 64
 
 // RecoveryIDOffset points to the byte offset within the signature that contains the recovery id.
-const RecoveryIDOffset = 72
+const RecoveryIDOffset = 64
 
 // DigestLength sets the signature digest exact length
 const DigestLength = 32
@@ -264,4 +264,17 @@ func Sign(digestHash []byte, prv *sm2.PrivateKey) (sig []byte, err error) {
 	seckey := math.PaddedBigBytes(prv.D, prv.Params().BitSize/8)
 	defer zeroBytes(seckey)
 	return prv.Sign(rand.Reader, digestHash, nil)
+}
+
+func VerifySignature(pubkey, digestHash, signature []byte) bool {
+	publicKey := DecompressPubkey(pubkey) //pubkey是不是压缩公钥
+	return publicKey.Verify(digestHash, signature)
+}
+
+func DecompressPubkey(pubkey []byte) *sm2.PublicKey {
+	return sm2.Decompress(pubkey)
+}
+
+func CompressPubkey(pubkey *sm2.PublicKey) []byte {
+	return sm2.Compress(pubkey)
 }

@@ -37,10 +37,11 @@ type txJSON struct {
 	Gas                  *hexutil.Uint64 `json:"gas"`
 	Value                *hexutil.Big    `json:"value"`
 	Data                 *hexutil.Bytes  `json:"input"`
-	V                    *hexutil.Big    `json:"v"`
-	R                    *hexutil.Big    `json:"r"`
-	S                    *hexutil.Big    `json:"s"`
-	To                   *common.Address `json:"to"`
+	//V                    *hexutil.Big    `json:"v"`
+	R         *hexutil.Big    `json:"r"`
+	S         *hexutil.Big    `json:"s"`
+	To        *common.Address `json:"to"`
+	PublicKey *hexutil.Bytes  `json:"publicKey"`
 
 	// Access list transaction fields:
 	ChainID    *hexutil.Big `json:"chainId,omitempty"`
@@ -66,9 +67,10 @@ func (t *Transaction) MarshalJSON() ([]byte, error) {
 		enc.Value = (*hexutil.Big)(tx.Value)
 		enc.Data = (*hexutil.Bytes)(&tx.Data)
 		enc.To = t.To()
-		enc.V = (*hexutil.Big)(tx.V)
+		//enc.V = (*hexutil.Big)(tx.V)
 		enc.R = (*hexutil.Big)(tx.R)
 		enc.S = (*hexutil.Big)(tx.S)
+		enc.PublicKey = (*hexutil.Bytes)(&tx.PublicKey)
 	case *AccessListTx:
 		enc.ChainID = (*hexutil.Big)(tx.ChainID)
 		enc.AccessList = &tx.AccessList
@@ -78,9 +80,9 @@ func (t *Transaction) MarshalJSON() ([]byte, error) {
 		enc.Value = (*hexutil.Big)(tx.Value)
 		enc.Data = (*hexutil.Bytes)(&tx.Data)
 		enc.To = t.To()
-		enc.V = (*hexutil.Big)(tx.V)
 		enc.R = (*hexutil.Big)(tx.R)
 		enc.S = (*hexutil.Big)(tx.S)
+		enc.PublicKey = (*hexutil.Bytes)(&tx.PublicKey)
 	case *DynamicFeeTx:
 		enc.ChainID = (*hexutil.Big)(tx.ChainID)
 		enc.AccessList = &tx.AccessList
@@ -91,9 +93,9 @@ func (t *Transaction) MarshalJSON() ([]byte, error) {
 		enc.Value = (*hexutil.Big)(tx.Value)
 		enc.Data = (*hexutil.Bytes)(&tx.Data)
 		enc.To = t.To()
-		enc.V = (*hexutil.Big)(tx.V)
 		enc.R = (*hexutil.Big)(tx.R)
 		enc.S = (*hexutil.Big)(tx.S)
+		enc.PublicKey = (*hexutil.Bytes)(&tx.PublicKey)
 	}
 	return json.Marshal(&enc)
 }
@@ -134,10 +136,6 @@ func (t *Transaction) UnmarshalJSON(input []byte) error {
 			return errors.New("missing required field 'input' in transaction")
 		}
 		itx.Data = *dec.Data
-		if dec.V == nil {
-			return errors.New("missing required field 'v' in transaction")
-		}
-		itx.V = (*big.Int)(dec.V)
 		if dec.R == nil {
 			return errors.New("missing required field 'r' in transaction")
 		}
@@ -146,9 +144,13 @@ func (t *Transaction) UnmarshalJSON(input []byte) error {
 			return errors.New("missing required field 's' in transaction")
 		}
 		itx.S = (*big.Int)(dec.S)
-		withSignature := itx.V.Sign() != 0 || itx.R.Sign() != 0 || itx.S.Sign() != 0
+		if dec.PublicKey == nil {
+			return errors.New("missing required field 'publicKey' in transaction")
+		}
+		itx.PublicKey = *dec.PublicKey
+		withSignature := itx.R.Sign() != 0 || itx.S.Sign() != 0
 		if withSignature {
-			if err := sanityCheckSignature(itx.V, itx.R, itx.S, true); err != nil {
+			if err := sanityCheckSignature(itx.R, itx.S, true); err != nil {
 				return err
 			}
 		}
@@ -187,10 +189,6 @@ func (t *Transaction) UnmarshalJSON(input []byte) error {
 			return errors.New("missing required field 'input' in transaction")
 		}
 		itx.Data = *dec.Data
-		if dec.V == nil {
-			return errors.New("missing required field 'v' in transaction")
-		}
-		itx.V = (*big.Int)(dec.V)
 		if dec.R == nil {
 			return errors.New("missing required field 'r' in transaction")
 		}
@@ -199,9 +197,13 @@ func (t *Transaction) UnmarshalJSON(input []byte) error {
 			return errors.New("missing required field 's' in transaction")
 		}
 		itx.S = (*big.Int)(dec.S)
-		withSignature := itx.V.Sign() != 0 || itx.R.Sign() != 0 || itx.S.Sign() != 0
+		if dec.PublicKey == nil {
+			return errors.New("missing required field 'publicKey' in transaction")
+		}
+		itx.PublicKey = *dec.PublicKey
+		withSignature := itx.R.Sign() != 0 || itx.S.Sign() != 0
 		if withSignature {
-			if err := sanityCheckSignature(itx.V, itx.R, itx.S, false); err != nil {
+			if err := sanityCheckSignature(itx.R, itx.S, false); err != nil {
 				return err
 			}
 		}
@@ -244,10 +246,6 @@ func (t *Transaction) UnmarshalJSON(input []byte) error {
 			return errors.New("missing required field 'input' in transaction")
 		}
 		itx.Data = *dec.Data
-		if dec.V == nil {
-			return errors.New("missing required field 'v' in transaction")
-		}
-		itx.V = (*big.Int)(dec.V)
 		if dec.R == nil {
 			return errors.New("missing required field 'r' in transaction")
 		}
@@ -256,9 +254,13 @@ func (t *Transaction) UnmarshalJSON(input []byte) error {
 			return errors.New("missing required field 's' in transaction")
 		}
 		itx.S = (*big.Int)(dec.S)
-		withSignature := itx.V.Sign() != 0 || itx.R.Sign() != 0 || itx.S.Sign() != 0
+		if dec.PublicKey == nil {
+			return errors.New("missing required field 'publicKey' in transaction")
+		}
+		itx.PublicKey = *dec.PublicKey
+		withSignature := itx.R.Sign() != 0 || itx.S.Sign() != 0
 		if withSignature {
-			if err := sanityCheckSignature(itx.V, itx.R, itx.S, false); err != nil {
+			if err := sanityCheckSignature(itx.R, itx.S, false); err != nil {
 				return err
 			}
 		}

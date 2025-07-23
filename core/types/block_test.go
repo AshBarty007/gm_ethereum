@@ -18,6 +18,8 @@ package types
 
 import (
 	"bytes"
+	"github.com/ethereum/go-ethereum/gmsm"
+	"github.com/ethereum/go-ethereum/gmsm/sm3"
 	"hash"
 	"math/big"
 	"reflect"
@@ -25,10 +27,8 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/math"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rlp"
-	"golang.org/x/crypto/sha3"
 )
 
 // from bcValidBlockTest.json, "SimpleTx"
@@ -225,7 +225,7 @@ type testHasher struct {
 }
 
 func newHasher() *testHasher {
-	return &testHasher{hasher: sha3.NewLegacyKeccak256()}
+	return &testHasher{hasher: sm3.New()}
 }
 
 func (h *testHasher) Reset() {
@@ -243,7 +243,7 @@ func (h *testHasher) Hash() common.Hash {
 
 func makeBenchBlock() *Block {
 	var (
-		key, _   = crypto.GenerateKey()
+		key, _   = gmsm.GenerateKey()
 		txs      = make([]*Transaction, 70)
 		receipts = make([]*Receipt, len(txs))
 		signer   = LatestSigner(params.TestChainConfig)
