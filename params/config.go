@@ -27,12 +27,12 @@ import (
 
 // Genesis hashes to enforce below configs on.
 var (
-	MainnetGenesisHash = common.HexToHash("0xd4e56740f876aef8c010b86a40d5f56745a118d0906a34e69aec8c0db1cb8fa3")
-	RopstenGenesisHash = common.HexToHash("0x41941023680923e0fe4d74a34bdac8141f2540e3ae90623718e47d66d1ca4a2d")
-	SepoliaGenesisHash = common.HexToHash("0x25a5cc106eea7138acab33231d7160d69cb777ee0c2c553fcddf5138993e6dd9")
-	RinkebyGenesisHash = common.HexToHash("0x6341fd3daf94b748c72ced5a5b26028f2474f5f00d824504e4fa37a75767e177")
-	GoerliGenesisHash  = common.HexToHash("0xbf7e331f7f7c1dd2e05159666b3bf8bc7a8a3a9eb1d518969eab529dd9b88c1a")
-	KilnGenesisHash    = common.HexToHash("0x51c7fe41be669f69c45c33a56982cbde405313342d9e2b00d7c91a7b284dd4f8")
+	MainnetGenesisHash = common.HexToHash("0xdfd54fae5d2ffad9a1767c3a36582ec22b7a1dfee658e5608faa6bbc584a78a0")
+	RopstenGenesisHash = common.HexToHash("0x3f4322a156ff195d30ced89bd3271e7a583fba43965f93cb295875d731e1319b")
+	SepoliaGenesisHash = common.HexToHash("0x115ee383fa3e12acd77567f370864c2ffd37dd4f45d545e25eb69e89a62d08fb")
+	RinkebyGenesisHash = common.HexToHash("0xe06b7b0479532b7b65275a4191abe8ef29b35ff65325ac169524ea6eb7b6bae4")
+	GoerliGenesisHash  = common.HexToHash("0x2aff6dc5bb20ba455b9b636c3e6ef1323b2e127e5363f8373c1f5a315b63eebe")
+	KilnGenesisHash    = common.HexToHash("0x56d0c78575c1cab077b62d20f9dd2a1b5932b46d17788261b68788a1936670d4")
 )
 
 // TrustedCheckpoints associates each known checkpoint with the genesis hash of

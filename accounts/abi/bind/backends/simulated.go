@@ -88,6 +88,33 @@ func NewSimulatedBackendWithDatabase(database ethdb.Database, alloc core.Genesis
 		config:     genesis.Config,
 	}
 
+	//var reload core.GenesisAlloc
+	//addr := common.HexToAddress("0x53c6C2E49beAa55830Dd2165443b9B105D90aC47")
+	//hash := common.HexToHash("0xe33ece30e49f36bdbade19e635bb0462feaf0b02cf9867b549b1499db3325542")
+	//err := reload.UnmarshalJSON(rawdb.ReadGenesisStateSpec(database, hash))
+	//if err != nil {
+	//	panic(err)
+	//}
+	//for addr, account := range reload {
+	//	fmt.Println("addr, account ", addr, account)
+	//}
+
+	//ctx := context.Background()
+	//backend.stateByBlockNumber(ctx, big.NewInt(0))
+	//backend.blockchain.State()
+	//backend.blockchain.StateAt(backend.blockchain.CurrentBlock().Root())
+	//state.New(backend.blockchain.CurrentBlock().Root(),backend.blockchain.StateCache(),backend.blockchain.Snapshots())
+
+	//stateDB, err := state.New(backend.blockchain.CurrentBlock().Root(), backend.blockchain.StateCache(), backend.blockchain.Snapshots()) //
+	//fmt.Println("root ", backend.blockchain.CurrentBlock().Root())
+	//if err != nil {
+	//	panic(err)
+	//}
+	//
+	//bal := stateDB.GetBalance(addr)
+	//fmt.Println("stateDB.GetBalance", bal)
+	//fmt.Println(backend.BalanceAt(ctx, common.HexToAddress("0x53c6C2E49beAa55830Dd2165443b9B105D90aC47"), nil))
+
 	filterBackend := &filterBackend{database, blockchain, backend}
 	backend.filterSystem = filters.NewFilterSystem(filterBackend, filters.Config{})
 	backend.events = filters.NewEventSystem(backend.filterSystem, false)
@@ -786,7 +813,6 @@ func (b *SimulatedBackend) SubscribeNewHead(ctx context.Context, ch chan<- *type
 func (b *SimulatedBackend) AdjustTime(adjustment time.Duration) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-
 	if len(b.pendingBlock.Transactions()) != 0 {
 		return errors.New("Could not adjust time on non-empty block")
 	}

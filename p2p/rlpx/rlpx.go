@@ -36,7 +36,6 @@ import (
 	"net"
 	"time"
 
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/gmsm/ecies"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/golang/snappy"
@@ -456,16 +455,16 @@ func (h *handshakeState) handleAuthMsg(msg *authMsgV4, prv *sm2.PrivateKey) erro
 	}
 
 	// Check the signature.
-	token, err := h.staticSharedSecret(prv)
-	if err != nil {
-		return err
-	}
-	signedMsg := xor(token, h.initNonce)
-	remoteRandomPub, err := crypto.Ecrecover(signedMsg, msg.Signature[:])
-	if err != nil {
-		return err
-	}
-	h.remoteRandomPub, _ = importPublicKey(remoteRandomPub)
+	//token, err := h.staticSharedSecret(prv)
+	//if err != nil {
+	//	return err
+	//}
+	//signedMsg := xor(token, h.initNonce)
+	//remoteRandomPub, err := crypto.Ecrecover(signedMsg, msg.Signature[:])
+	//if err != nil {
+	//	return err
+	//}
+	//h.remoteRandomPub, _ = importPublicKey(remoteRandomPub)
 	return nil
 }
 

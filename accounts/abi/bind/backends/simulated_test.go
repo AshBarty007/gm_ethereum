@@ -20,7 +20,13 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
+	"github.com/ethereum/go-ethereum/core/rawdb"
+	"github.com/ethereum/go-ethereum/core/state"
+	"github.com/ethereum/go-ethereum/core/state/snapshot"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/gmsm"
+	"github.com/ethereum/go-ethereum/trie"
 	"math/big"
 	"math/rand"
 	"reflect"
@@ -39,7 +45,7 @@ import (
 
 func TestSimulatedBackend(t *testing.T) {
 	var gasLimit uint64 = 8000029
-	key, _ := gmsm.GenerateKey() // nolint: gosec
+	key, _ := gmsm.HexToSM2("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291") //gmsm.GenerateKey() // nolint: gosec
 	auth, _ := bind.NewKeyedTransactorWithChainID(key, big.NewInt(1337))
 	genAlloc := make(core.GenesisAlloc)
 	genAlloc[auth.From] = core.GenesisAccount{Balance: big.NewInt(9223372036854775807)}
@@ -69,7 +75,7 @@ func TestSimulatedBackend(t *testing.T) {
 
 	err = sim.SendTransaction(context.Background(), tx)
 	if err != nil {
-		t.Fatal("error sending transaction")
+		t.Fatal("error sending transaction", err)
 	}
 
 	txHash = tx.Hash()
@@ -173,7 +179,7 @@ func TestNewAdjustTimeFail(t *testing.T) {
 	sim.SendTransaction(context.Background(), signedTx)
 	// AdjustTime should fail on non-empty block
 	if err := sim.AdjustTime(time.Second); err == nil {
-		t.Error("Expected adjust time to error on non-empty block")
+		t.Error("Expected adjust time to error on non-empty block", err)
 	}
 	sim.Commit()
 
@@ -206,6 +212,7 @@ func TestBalanceAt(t *testing.T) {
 	defer sim.Close()
 	bgCtx := context.Background()
 
+	fmt.Println("BalanceAt")
 	bal, err := sim.BalanceAt(bgCtx, testAddr, nil)
 	if err != nil {
 		t.Error(err)
@@ -1376,4 +1383,44 @@ func TestCommitReturnValue(t *testing.T) {
 	if sim.blockchain.GetHeader(h2fork, startBlockHeight+2) == nil {
 		t.Error("Could not retrieve the just created block (side-chain)")
 	}
+}
+
+func TestShotsnap(t *testing.T) {
+	db := rawdb.NewMemoryDatabase()
+	stateCache := state.NewDatabaseWithConfig(db, &trie.Config{
+		Cache:     256,
+		Journal:   "triecache",
+		Preimages: true,
+	})
+	SnapshotLimit := 256
+	root := common.HexToHash("0xe33ece30e49f36bdbade19e635bb0462feaf0b02cf9867b549b1499db3325542")
+	fmt.Println("set root", root)
+
+	testAddr := gmsm.PubkeyToAddress(testKey.PublicKey)
+	alloc := core.GenesisAlloc{
+		testAddr: {Balance: big.NewInt(10000000000000000)},
+	}
+	fmt.Println("testAddr", testAddr)
+	genesis := core.Genesis{Config: params.AllEthashProtocolChanges, GasLimit: 10000000, Alloc: alloc}
+	hash := genesis.MustCommit(db).Hash()
+	fmt.Println("block hash", hash)
+
+	snaps, err := snapshot.New(db, stateCache.TrieDB(), SnapshotLimit, root, false, true, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	snap := snaps.Snapshot(root)
+	fmt.Println("get root", snap.Root())
+
+	hasher := crypto.NewKeccakState()
+	hash2 := crypto.HashData(hasher, testAddr.Bytes())
+	fmt.Println("hash2", hash2)
+	//hash = common.HexToHash("0x6eaa755120c018185f7c1c89e446974137a2f1dbdce03236249992a6e2644a0c")
+	acc, err := snap.Account(hash)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Println("account", acc)
+	//
 }

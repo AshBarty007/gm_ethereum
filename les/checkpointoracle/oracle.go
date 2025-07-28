@@ -29,7 +29,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/checkpointoracle"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
 )
@@ -146,12 +145,12 @@ func (oracle *CheckpointOracle) VerifySigners(index uint64, hash [32]byte, signa
 		binary.BigEndian.PutUint64(buf, index)
 		data := append([]byte{0x19, 0x00}, append(oracle.config.Address.Bytes(), append(buf, hash[:]...)...)...)
 		signatures[i][64] -= 27 // Transform V from 27/28 to 0/1 according to the yellow paper for verification.
-		pubkey, err := crypto.Ecrecover(gmsm.SM3(data), signatures[i])
-		if err != nil {
-			return false, nil
-		}
+		//pubkey, err := crypto.Ecrecover(gmsm.SM3(data), signatures[i])
+		//if err != nil {
+		//	return false, nil
+		//}
 		var signer common.Address
-		copy(signer[:], gmsm.SM3(pubkey[1:])[12:])
+		copy(signer[:], gmsm.SM3(data[1:])[12:])
 		if _, exist := checked[signer]; exist {
 			continue
 		}

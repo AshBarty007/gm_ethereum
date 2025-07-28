@@ -22,6 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/ethereum/go-ethereum/gmsm"
+	"github.com/ethereum/go-ethereum/gmsm/sm3"
 	"math/big"
 	"math/rand"
 	"sort"
@@ -34,7 +35,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/state/snapshot"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/light"
@@ -2404,7 +2404,7 @@ func (s *Syncer) onByteCodes(peer SyncPeer, id uint64, bytecodes [][]byte) error
 
 	// Cross reference the requested bytecodes with the response to find gaps
 	// that the serving node is missing
-	hasher := sha3.NewLegacyKeccak256().(crypto.KeccakState)
+	hasher := sm3.New().(gmsm.Sm3State)
 	hash := make([]byte, 32)
 
 	codes := make([][]byte, len(req.hashes))
@@ -2412,7 +2412,8 @@ func (s *Syncer) onByteCodes(peer SyncPeer, id uint64, bytecodes [][]byte) error
 		// Find the next hash that we've been served, leaving misses with nils
 		hasher.Reset()
 		hasher.Write(bytecodes[i])
-		hasher.Read(hash)
+		//hasher.Read(hash)
+		hash = hasher.Sum(nil)
 
 		for j < len(req.hashes) && !bytes.Equal(hash, req.hashes[j][:]) {
 			j++
@@ -2640,7 +2641,7 @@ func (s *Syncer) OnTrieNodes(peer SyncPeer, id uint64, trienodes [][]byte) error
 
 	// Cross reference the requested trienodes with the response to find gaps
 	// that the serving node is missing
-	hasher := sha3.NewLegacyKeccak256().(crypto.KeccakState)
+	hasher := sha3.NewLegacyKeccak256().(gmsm.Sm3State)
 	hash := make([]byte, 32)
 
 	nodes := make([][]byte, len(req.hashes))
@@ -2648,7 +2649,8 @@ func (s *Syncer) OnTrieNodes(peer SyncPeer, id uint64, trienodes [][]byte) error
 		// Find the next hash that we've been served, leaving misses with nils
 		hasher.Reset()
 		hasher.Write(trienodes[i])
-		hasher.Read(hash)
+		//hasher.Read(hash)
+		hash = hasher.Sum(nil)
 
 		for j < len(req.hashes) && !bytes.Equal(hash, req.hashes[j][:]) {
 			j++
@@ -2735,7 +2737,7 @@ func (s *Syncer) onHealByteCodes(peer SyncPeer, id uint64, bytecodes [][]byte) e
 
 	// Cross reference the requested bytecodes with the response to find gaps
 	// that the serving node is missing
-	hasher := sha3.NewLegacyKeccak256().(crypto.KeccakState)
+	hasher := sm3.New().(gmsm.Sm3State)
 	hash := make([]byte, 32)
 
 	codes := make([][]byte, len(req.hashes))
@@ -2743,7 +2745,8 @@ func (s *Syncer) onHealByteCodes(peer SyncPeer, id uint64, bytecodes [][]byte) e
 		// Find the next hash that we've been served, leaving misses with nils
 		hasher.Reset()
 		hasher.Write(bytecodes[i])
-		hasher.Read(hash)
+		//hasher.Read(hash)
+		hash = hasher.Sum(nil)
 
 		for j < len(req.hashes) && !bytes.Equal(hash, req.hashes[j][:]) {
 			j++

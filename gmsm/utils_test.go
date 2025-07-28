@@ -342,6 +342,9 @@ func TestCase(t *testing.T) {
 
 	hx, _ := priv.Sign(rand.Reader, msg, nil)
 	t.Logf("hx: %d", len(hx))
+
+	addr := PubkeyToAddress(priv.PublicKey)
+	t.Logf("addr: %v", addr)
 }
 
 func TestSignLength(t *testing.T) {

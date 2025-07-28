@@ -11,15 +11,14 @@ import (
 	"crypto/sha256"
 	"crypto/sha512"
 	"fmt"
+	"github.com/ethereum/go-ethereum/gmsm"
 	"github.com/ethereum/go-ethereum/gmsm/sm2"
 	"github.com/ethereum/go-ethereum/gmsm/sm3"
 	"hash"
-
-	ethcrypto "github.com/ethereum/go-ethereum/crypto"
 )
 
 var (
-	DefaultCurve                  = ethcrypto.S256()
+	DefaultCurve                  = gmsm.P256Sm2()
 	ErrUnsupportedECDHAlgorithm   = fmt.Errorf("ecies: unsupported ECDH algorithm")
 	ErrUnsupportedECIESParameters = fmt.Errorf("ecies: unsupported ECIES parameters")
 	ErrInvalidKeyLen              = fmt.Errorf("ecies: invalid key size (> %d) in ECIESParams", maxKeyLen)

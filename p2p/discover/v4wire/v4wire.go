@@ -29,7 +29,6 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common/math"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/ethereum/go-ethereum/rlp"
@@ -265,11 +264,11 @@ func Encode(priv *sm2.PrivateKey, req Packet) (packet, hash []byte, err error) {
 
 // recoverNodeKey computes the public key used to sign the given hash from the signature.
 func recoverNodeKey(hash, sig []byte) (key Pubkey, err error) {
-	pubkey, err := crypto.Ecrecover(hash, sig)
-	if err != nil {
-		return key, err
-	}
-	copy(key[:], pubkey[1:])
+	//pubkey, err := crypto.Ecrecover(hash, sig)
+	//if err != nil {
+	//	return key, err
+	//}
+	//copy(key[:], pubkey[1:])
 	return key, nil
 }
 

@@ -27,7 +27,6 @@ import (
 	"hash"
 
 	"github.com/ethereum/go-ethereum/common/math"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"golang.org/x/crypto/hkdf"
 )
@@ -103,7 +102,7 @@ func verifyIDSignature(hash hash.Hash, sig []byte, n *enode.Node, challenge, eph
 			return errors.New("no secp256k1 public key in record")
 		}
 		input := idNonceHash(hash, challenge, ephkey, destID)
-		if !crypto.VerifySignature(pubkey, input, sig) {
+		if !gmsm.VerifySignature(pubkey, input, sig) {
 			return errInvalidNonceSig
 		}
 		return nil

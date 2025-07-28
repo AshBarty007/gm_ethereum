@@ -17,17 +17,17 @@
 package trie
 
 import (
+	"github.com/ethereum/go-ethereum/gmsm"
+	"github.com/ethereum/go-ethereum/gmsm/sm3"
 	"sync"
 
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rlp"
-	"golang.org/x/crypto/sha3"
 )
 
 // hasher is a type used for the trie Hash operation. A hasher has some
 // internal preallocated temp space
 type hasher struct {
-	sha      crypto.KeccakState
+	sha      gmsm.Sm3State
 	tmp      []byte
 	encbuf   rlp.EncoderBuffer
 	parallel bool // Whether to use parallel threads when hashing
@@ -38,7 +38,7 @@ var hasherPool = sync.Pool{
 	New: func() interface{} {
 		return &hasher{
 			tmp:    make([]byte, 0, 550), // cap is as large as a full fullNode.
-			sha:    sha3.NewLegacyKeccak256().(crypto.KeccakState),
+			sha:    sm3.New().(gmsm.Sm3State),
 			encbuf: rlp.NewEncoderBuffer(nil),
 		}
 	},
@@ -170,8 +170,8 @@ func (h *hasher) fullnodeToHash(n *fullNode, force bool) node {
 //
 // All node encoding must be done like this:
 //
-//     node.encode(h.encbuf)
-//     enc := h.encodedBytes()
+//	node.encode(h.encbuf)
+//	enc := h.encodedBytes()
 //
 // This convention exists because node.encode can only be inlined/escape-analyzed when
 // called on a concrete receiver type.
@@ -186,7 +186,8 @@ func (h *hasher) hashData(data []byte) hashNode {
 	n := make(hashNode, 32)
 	h.sha.Reset()
 	h.sha.Write(data)
-	h.sha.Read(n)
+	//h.sha.Read(n)
+	n = h.sha.Sum(nil)
 	return n
 }
 

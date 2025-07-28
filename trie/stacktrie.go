@@ -376,11 +376,12 @@ func (st *StackTrie) insert(key, value []byte) {
 // hash converts st into a 'hashedNode', if possible. Possible outcomes:
 //
 // 1. The rlp-encoded value was >= 32 bytes:
-//  - Then the 32-byte `hash` will be accessible in `st.val`.
-//  - And the 'st.type' will be 'hashedNode'
+//   - Then the 32-byte `hash` will be accessible in `st.val`.
+//   - And the 'st.type' will be 'hashedNode'
+//
 // 2. The rlp-encoded value was < 32 bytes
-//  - Then the <32 byte rlp-encoded value will be accessible in 'st.val'.
-//  - And the 'st.type' will be 'hashedNode' AGAIN
+//   - Then the <32 byte rlp-encoded value will be accessible in 'st.val'.
+//   - And the 'st.type' will be 'hashedNode' AGAIN
 //
 // This method also sets 'st.type' to hashedNode, and clears 'st.key'.
 func (st *StackTrie) hash() {
@@ -490,7 +491,8 @@ func (st *StackTrie) Hash() (h common.Hash) {
 	// node. For the top level node, we need to force the hashing.
 	hasher.sha.Reset()
 	hasher.sha.Write(st.val)
-	hasher.sha.Read(h[:])
+	//hasher.sha.Read(h[:])
+	h = common.BytesToHash(hasher.sha.Sum(nil))
 	return h
 }
 
@@ -520,7 +522,8 @@ func (st *StackTrie) Commit() (h common.Hash, err error) {
 	// node. For the top level node, we need to force the hashing+commit.
 	hasher.sha.Reset()
 	hasher.sha.Write(st.val)
-	hasher.sha.Read(h[:])
+	//hasher.sha.Read(h[:])
+	h = common.BytesToHash(hasher.sha.Sum(nil))
 	st.db.Put(h[:], st.val)
 	return h, nil
 }

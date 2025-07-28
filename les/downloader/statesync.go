@@ -18,12 +18,12 @@ package downloader
 
 import (
 	"fmt"
+	"github.com/ethereum/go-ethereum/gmsm"
 	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/state"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/trie"
@@ -259,9 +259,9 @@ func (d *Downloader) spindownStateSync(active map[string]*stateReq, finished []*
 type stateSync struct {
 	d *Downloader // Downloader instance to access and manage current peerset
 
-	root   common.Hash        // State root currently being synced
-	sched  *trie.Sync         // State trie sync scheduler defining the tasks
-	keccak crypto.KeccakState // Keccak256 hasher to verify deliveries with
+	root   common.Hash   // State root currently being synced
+	sched  *trie.Sync    // State trie sync scheduler defining the tasks
+	keccak gmsm.Sm3State // Keccak256 hasher to verify deliveries with
 
 	trieTasks map[string]*trieTask      // Set of trie node tasks currently queued for retrieval, indexed by path
 	codeTasks map[common.Hash]*codeTask // Set of byte code tasks currently queued for retrieval, indexed by hash
@@ -299,7 +299,7 @@ func newStateSync(d *Downloader, root common.Hash) *stateSync {
 		d:         d,
 		root:      root,
 		sched:     state.NewStateSync(root, d.stateDB, nil),
-		keccak:    sha3.NewLegacyKeccak256().(crypto.KeccakState),
+		keccak:    sha3.NewLegacyKeccak256().(gmsm.Sm3State),
 		trieTasks: make(map[string]*trieTask),
 		codeTasks: make(map[common.Hash]*codeTask),
 		deliver:   make(chan *stateReq),
@@ -592,7 +592,9 @@ func (s *stateSync) processNodeData(nodeTasks map[string]*trieTask, codeTasks ma
 	var hash common.Hash
 	s.keccak.Reset()
 	s.keccak.Write(blob)
-	s.keccak.Read(hash[:])
+	//s.keccak.Read(hash[:])
+	ok := s.keccak.Sum(nil)
+	hash = common.BytesToHash(ok)
 
 	if _, present := codeTasks[hash]; present {
 		err := s.sched.ProcessCode(trie.CodeSyncResult{

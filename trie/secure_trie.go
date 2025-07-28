@@ -259,7 +259,9 @@ func (t *StateTrie) hashKey(key []byte) []byte {
 	h := newHasher(false)
 	h.sha.Reset()
 	h.sha.Write(key)
-	h.sha.Read(t.hashKeyBuf[:])
+	ok := h.sha.Sum(nil)
+	t.hashKeyBuf = common.BytesToHash(ok)
+	//h.sha.Read(t.hashKeyBuf[:])
 	returnHasherToPool(h)
 	return t.hashKeyBuf[:]
 }

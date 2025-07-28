@@ -37,7 +37,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
 	pcsc "github.com/gballet/go-libpcsclite"
 	"github.com/status-im/keycard-go/derivationpath"
@@ -984,9 +983,9 @@ func (s *Session) derive(path accounts.DerivationPath) (accounts.Account, error)
 	copy(sig[32-len(rbytes):32], rbytes)
 	copy(sig[64-len(sbytes):64], sbytes)
 
-	if err := confirmPublicKey(sig, sigdata.PublicKey); err != nil {
-		return accounts.Account{}, err
-	}
+	//if err := confirmPublicKey(sig, sigdata.PublicKey); err != nil {
+	//	return accounts.Account{}, err
+	//}
 	pub, err := gmsm.UnmarshalPubkey(sigdata.PublicKey)
 	if err != nil {
 		return accounts.Account{}, err
@@ -1052,7 +1051,7 @@ func (s *Session) sign(path accounts.DerivationPath, hash []byte) ([]byte, error
 	copy(sig[64-len(sbytes):64], sbytes)
 
 	// Recover the V value.
-	sig, err = makeRecoverableSignature(hash, sig, sigdata.PublicKey)
+	//sig, err = makeRecoverableSignature(hash, sig, sigdata.PublicKey)
 	if err != nil {
 		return nil, err
 	}
@@ -1061,28 +1060,28 @@ func (s *Session) sign(path accounts.DerivationPath, hash []byte) ([]byte, error
 	return sig, nil
 }
 
-// confirmPublicKey confirms that the given signature belongs to the specified key.
-func confirmPublicKey(sig, pubkey []byte) error {
-	_, err := makeRecoverableSignature(DerivationSignatureHash[:], sig, pubkey)
-	return err
-}
-
-// makeRecoverableSignature uses a signature and an expected public key to
-// recover the v value and produce a recoverable signature.
-func makeRecoverableSignature(hash, sig, expectedPubkey []byte) ([]byte, error) {
-	var libraryError error
-	for v := 0; v < 2; v++ {
-		sig[64] = byte(v)
-		if pubkey, err := crypto.Ecrecover(hash, sig); err == nil {
-			if bytes.Equal(pubkey, expectedPubkey) {
-				return sig, nil
-			}
-		} else {
-			libraryError = err
-		}
-	}
-	if libraryError != nil {
-		return nil, libraryError
-	}
-	return nil, ErrPubkeyMismatch
-}
+//// confirmPublicKey confirms that the given signature belongs to the specified key.
+//func confirmPublicKey(sig, pubkey []byte) error {
+//	_, err := makeRecoverableSignature(DerivationSignatureHash[:], sig, pubkey)
+//	return err
+//}
+//
+//// makeRecoverableSignature uses a signature and an expected public key to
+//// recover the v value and produce a recoverable signature.
+//func makeRecoverableSignature(hash, sig, expectedPubkey []byte) ([]byte, error) {
+//	var libraryError error
+//	for v := 0; v < 2; v++ {
+//		sig[64] = byte(v)
+//		if pubkey, err := crypto.Ecrecover(hash, sig); err == nil {
+//			if bytes.Equal(pubkey, expectedPubkey) {
+//				return sig, nil
+//			}
+//		} else {
+//			libraryError = err
+//		}
+//	}
+//	if libraryError != nil {
+//		return nil, libraryError
+//	}
+//	return nil, ErrPubkeyMismatch
+//}
