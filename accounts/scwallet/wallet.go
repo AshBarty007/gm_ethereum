@@ -1050,11 +1050,11 @@ func (s *Session) sign(path accounts.DerivationPath, hash []byte) ([]byte, error
 	copy(sig[32-len(rbytes):32], rbytes)
 	copy(sig[64-len(sbytes):64], sbytes)
 
-	// Recover the V value.
+	//// Recover the V value.
 	//sig, err = makeRecoverableSignature(hash, sig, sigdata.PublicKey)
-	if err != nil {
-		return nil, err
-	}
+	//if err != nil {
+	//	return nil, err
+	//}
 	log.Debug("Signed using smartcard", "deriveTime", deriveTime.Sub(startTime), "signingTime", time.Since(deriveTime))
 
 	return sig, nil

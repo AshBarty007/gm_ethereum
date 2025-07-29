@@ -17,6 +17,11 @@
 package keystore
 
 import (
+	"bytes"
+	"encoding/hex"
+	"encoding/json"
+	"fmt"
+	"github.com/ethereum/go-ethereum/gmsm"
 	"os"
 	"testing"
 
@@ -58,3 +63,87 @@ func TestKeyEncryptDecrypt(t *testing.T) {
 		}
 	}
 }
+
+func TestPassphraseMatch(t *testing.T) {
+	auth := "123456"
+	k := new(encryptedKeyJSONV3)
+	keyjson, err := os.ReadFile("testdata/account1.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(keyjson, k); err != nil {
+		t.Fatal(err)
+	}
+	cryptoJson := k.Crypto
+
+	mac, err := hex.DecodeString(cryptoJson.MAC)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cipherText, err := hex.DecodeString(cryptoJson.CipherText)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	derivedKey, err := getKDFKey(cryptoJson, auth)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	calculatedMAC := gmsm.SM3(derivedKey[16:32], cipherText)
+	t.Log("mac, derivedKey[16:32], cipherText:", hex.EncodeToString(mac), hex.EncodeToString(derivedKey[16:32]), hex.EncodeToString(cipherText))
+	t.Log("calculatedMAC:", hex.EncodeToString(calculatedMAC))
+	if !bytes.Equal(calculatedMAC, mac) {
+		t.Fatal("passphrase 266:calculatedMAC, mac:", hex.EncodeToString(calculatedMAC), hex.EncodeToString(mac))
+	} else {
+		t.Log("success")
+	}
+}
+
+func TestUnlockAccount(t *testing.T) {
+	_, ks := tmpKeyStore(t, true)
+	acc, err := ks.NewAccount("old")
+	if err != nil {
+		t.Fatalf("failed to create account: %v", acc)
+	}
+	fmt.Println("========================================================================")
+
+	keyjson, err := ks.Export(acc, "old", "new")
+	k := new(encryptedKeyJSONV3)
+	if err := json.Unmarshal(keyjson, k); err != nil {
+		t.Fatal(err)
+	}
+	cryptoJson := k.Crypto
+
+	mac, err := hex.DecodeString(cryptoJson.MAC)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cipherText, err := hex.DecodeString(cryptoJson.CipherText)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	auth := "new"
+	derivedKey, err := getKDFKey(cryptoJson, auth)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	calculatedMAC := gmsm.SM3(derivedKey[16:32], cipherText)
+	if !bytes.Equal(calculatedMAC, mac) {
+		fmt.Println("DecryptDataV3 160:mac, derivedKey[16:32], cipherText:", hex.EncodeToString(mac), hex.EncodeToString(derivedKey[16:32]), hex.EncodeToString(cipherText))
+		fmt.Println("calculatedMAC, mac:", hex.EncodeToString(calculatedMAC), hex.EncodeToString(mac))
+	} else {
+		fmt.Println("success")
+	}
+
+}
+
+/*
+DecryptDataV3 267:mac, derivedKey[16:32], cipherText: 4c4a46d85a05ed89523a91eb12cf24345d9ff3b782c55a822e5fc377be8e86be 72561824827d4716dc5dc0634fe63fd6 ffc9cee6a4c502b70e9fa16d013c608b539bc4dfecb91cc8df6b948e10b44e9a
+DecryptDataV3 268:calculatedMAC: ec296dd65e4311c8dfc38b976d8fff6c03d5962d0af70d00e06d6d3547eb9405
+
+*/

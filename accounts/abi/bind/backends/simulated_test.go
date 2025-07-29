@@ -24,8 +24,8 @@ import (
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/state/snapshot"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/gmsm"
+	"github.com/ethereum/go-ethereum/gmsm/sm3"
 	"github.com/ethereum/go-ethereum/trie"
 	"math/big"
 	"math/rand"
@@ -515,8 +515,10 @@ func TestEstimateGas(t *testing.T) {
 		}, 21275, nil, nil},
 	}
 	for _, c := range cases {
+		fmt.Println(c.name)
 		got, err := sim.EstimateGas(context.Background(), c.message)
 		if c.expectError != nil {
+			t.Log("error mssage: ", err)
 			if err == nil {
 				t.Fatalf("Expect error, got nil")
 			}
@@ -1393,34 +1395,26 @@ func TestShotsnap(t *testing.T) {
 		Preimages: true,
 	})
 	SnapshotLimit := 256
-	root := common.HexToHash("0xe33ece30e49f36bdbade19e635bb0462feaf0b02cf9867b549b1499db3325542")
-	fmt.Println("set root", root)
 
 	testAddr := gmsm.PubkeyToAddress(testKey.PublicKey)
 	alloc := core.GenesisAlloc{
 		testAddr: {Balance: big.NewInt(10000000000000000)},
 	}
-	fmt.Println("testAddr", testAddr)
 	genesis := core.Genesis{Config: params.AllEthashProtocolChanges, GasLimit: 10000000, Alloc: alloc}
-	hash := genesis.MustCommit(db).Hash()
-	fmt.Println("block hash", hash)
+	block := genesis.MustCommit(db)
+	root := block.Root()
 
 	snaps, err := snapshot.New(db, stateCache.TrieDB(), SnapshotLimit, root, false, true, true)
 	if err != nil {
 		t.Fatal(err)
 	}
 
+	hasher := sm3.New()
+	key := gmsm.HashData(hasher, testAddr.Bytes())
 	snap := snaps.Snapshot(root)
-	fmt.Println("get root", snap.Root())
-
-	hasher := crypto.NewKeccakState()
-	hash2 := crypto.HashData(hasher, testAddr.Bytes())
-	fmt.Println("hash2", hash2)
-	//hash = common.HexToHash("0x6eaa755120c018185f7c1c89e446974137a2f1dbdce03236249992a6e2644a0c")
-	acc, err := snap.Account(hash)
+	account, err := snap.Account(key)
 	if err != nil {
 		t.Fatal(err)
 	}
-	fmt.Println("account", acc)
-	//
+	fmt.Println("account balance: ", account.Balance)
 }

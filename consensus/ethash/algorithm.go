@@ -18,6 +18,7 @@ package ethash
 
 import (
 	"encoding/binary"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/gmsm"
 	"hash"
 	"math/big"
@@ -344,7 +345,7 @@ func hashimoto(hash []byte, nonce uint64, size uint64, lookup func(index uint32)
 	copy(seed, hash)
 	binary.LittleEndian.PutUint64(seed[32:], nonce)
 
-	seed = gmsm.SM3(seed)
+	seed = crypto.Keccak512(seed)
 	seedHead := binary.LittleEndian.Uint32(seed)
 
 	// Start the mix with replicated seed

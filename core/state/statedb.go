@@ -147,7 +147,7 @@ func New(root common.Hash, db Database, snaps *snapshot.Tree) (*StateDB, error) 
 		accessList:          newAccessList(),
 		hasher:              gmsm.NewSm3State(),
 	}
-	//fmt.Println("余额:", sdb.GetBalance(common.HexToAddress("0x53c6C2E49beAa55830Dd2165443b9B105D90aC47")))
+
 	if sdb.snaps != nil {
 		if sdb.snap = sdb.snaps.Snapshot(root); sdb.snap != nil {
 			sdb.snapDestructs = make(map[common.Hash]struct{})
@@ -514,7 +514,6 @@ func (s *StateDB) getDeletedStateObject(addr common.Address) *stateObject {
 	if s.snap != nil {
 		start := time.Now()
 		acc, err := s.snap.Account(gmsm.HashData(s.hasher, addr.Bytes()))
-		fmt.Println("地址,读取哈希", acc, gmsm.HashData(s.hasher, addr.Bytes()))
 		if metrics.EnabledExpensive {
 			s.SnapshotAccountReads += time.Since(start)
 		}

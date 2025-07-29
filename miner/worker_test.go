@@ -18,6 +18,7 @@ package miner
 
 import (
 	"errors"
+	"github.com/ethereum/go-ethereum/gmsm"
 	"math/big"
 	"math/rand"
 	"sync/atomic"
@@ -56,8 +57,8 @@ var (
 	cliqueChainConfig *params.ChainConfig
 
 	// Test accounts
-	testBankKey, _  = crypto.GenerateKey()
-	testBankAddress = crypto.PubkeyToAddress(testBankKey.PublicKey)
+	testBankKey, _  = gmsm.GenerateKey()
+	testBankAddress = gmsm.PubkeyToAddress(testBankKey.PublicKey)
 	testBankFunds   = big.NewInt(1000000000000000000)
 
 	testUserKey, _  = crypto.GenerateKey()
@@ -128,7 +129,7 @@ func newTestWorkerBackend(t *testing.T, chainConfig *params.ChainConfig, engine 
 		gspec.ExtraData = make([]byte, 32+common.AddressLength+crypto.SignatureLength)
 		copy(gspec.ExtraData[32:32+common.AddressLength], testBankAddress.Bytes())
 		e.Authorize(testBankAddress, func(account accounts.Account, s string, data []byte) ([]byte, error) {
-			return crypto.Sign(crypto.Keccak256(data), testBankKey)
+			return gmsm.Sign(gmsm.SM3(data), testBankKey)
 		})
 	case *ethash.Ethash:
 	default:
