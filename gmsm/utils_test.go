@@ -1,6 +1,7 @@
 package gmsm
 
 import (
+	"bytes"
 	"crypto/rand"
 	"crypto/x509/pkix"
 	"encoding/asn1"
@@ -347,22 +348,18 @@ func TestCase(t *testing.T) {
 	t.Logf("addr: %v", addr)
 }
 
-func TestSignLength(t *testing.T) {
+func TestSignRS(t *testing.T) {
 	key, _ := HexToSM2(testPrivHex)
 
-	msg := SM3([]byte("foo"))
-	sig, err := Sign(msg, key)
+	data := SM3([]byte("foo"))
+	sig, err := Sign(data, key)
 	if err != nil {
 		t.Errorf("Sign error: %s", err)
 	}
 
 	r, s, _ := sm2.Sm2Sign(key, msg, nil, rand.Reader)
 
-	var rawSignature []byte
-	r.FillBytes(rawSignature[0:32])  // r 占用前32字节
-	s.FillBytes(rawSignature[32:64]) // s 占用后32字节
-
-	fmt.Printf("signature length: %d\n", len(rawSignature))
+	fmt.Printf("signature length: %d\n", len(sig))
 
 	r1 := new(big.Int).SetBytes(sig[:32])
 	s1 := new(big.Int).SetBytes(sig[32:64])
@@ -374,4 +371,33 @@ func TestSignLength(t *testing.T) {
 	if s.Cmp(s1) == 0 {
 		t.Errorf("s is equal to sign s")
 	}
+}
+
+func TestDecompressPubkey(t *testing.T) {
+	key, _ := GenerateKey()
+	pub := PubToUnCompressBytes2(&key.PublicKey)
+	fmt.Println("len(pub): ", len(pub))
+	newKey := UnCompressBytesToPub2(pub)
+
+	data := []byte("message")
+	b, _ := newKey.EncryptAsn1(data, rand.Reader)
+	res, _ := key.DecryptAsn1(b)
+
+	if bytes.Equal(res, data) {
+		fmt.Println("success")
+	} else {
+		fmt.Println("fail")
+	}
+}
+
+func TestCopyBytes(t *testing.T) {
+	data := []byte("message")
+	dataLen := len(data)
+	fmt.Println("len(data): ", len(data), string(data))
+	l := make([]byte, dataLen*4)
+	copy(l, data)
+	copy(l[dataLen:], data)
+	copy(l[dataLen*2:], data)
+	copy(l[dataLen*3:], data)
+	fmt.Println("l: ", len(l), string(l))
 }

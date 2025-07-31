@@ -20,6 +20,7 @@ package v4wire
 import (
 	"bytes"
 	"crypto/elliptic"
+	"crypto/rand"
 	"errors"
 	"fmt"
 	"github.com/ethereum/go-ethereum/gmsm"
@@ -194,7 +195,8 @@ func Expired(ts uint64) bool {
 const (
 	macSize  = 32
 	sigSize  = gmsm.SignatureLength
-	headSize = macSize + sigSize // space of packet frame data
+	pubSize  = 64
+	headSize = macSize + sigSize + pubSize // space of packet frame data
 )
 
 var (
@@ -210,14 +212,21 @@ func Decode(input []byte) (Packet, Pubkey, []byte, error) {
 	if len(input) < headSize+1 {
 		return nil, Pubkey{}, nil, ErrPacketTooSmall
 	}
-	hash, sig, sigdata := input[:macSize], input[macSize:headSize], input[headSize:]
+	hash, pub, sig, sigdata := input[:macSize], input[macSize:pubSize+macSize], input[pubSize+macSize:headSize], input[headSize:]
 	shouldhash := gmsm.SM3(input[macSize:])
 	if !bytes.Equal(hash, shouldhash) {
 		return nil, Pubkey{}, nil, ErrBadHash
 	}
-	fromKey, err := recoverNodeKey(gmsm.SM3(input[headSize:]), sig)
+
+	var fromKey Pubkey
+	copy(fromKey[:], pub)
+	pubKey, err := DecodePubkey(gmsm.P256Sm2(), fromKey)
 	if err != nil {
 		return nil, fromKey, hash, err
+	}
+	res := pubKey.Verify(sigdata, sig)
+	if !res {
+		return nil, fromKey, hash, fmt.Errorf("invalid signature from v4wire")
 	}
 
 	var req Packet
@@ -251,11 +260,13 @@ func Encode(priv *sm2.PrivateKey, req Packet) (packet, hash []byte, err error) {
 		return nil, nil, err
 	}
 	packet = b.Bytes()
-	sig, err := gmsm.Sign(gmsm.SM3(packet[headSize:]), priv)
+	sig, err := priv.Sign(rand.Reader, packet[headSize:], nil)
 	if err != nil {
 		return nil, nil, err
 	}
-	copy(packet[macSize:], sig)
+	pub := EncodePubkey(&priv.PublicKey)
+	copy(packet[macSize:], pub[:])
+	copy(packet[pubSize+macSize:], sig)
 	// Add the hash to the front. Note: this doesn't protect the packet in any way.
 	hash = gmsm.SM3(packet[macSize:])
 	copy(packet, hash)
@@ -272,7 +283,6 @@ func recoverNodeKey(hash, sig []byte) (key Pubkey, err error) {
 	return key, nil
 }
 
-// EncodePubkey encodes a secp256k1 public key.
 func EncodePubkey(key *sm2.PublicKey) Pubkey {
 	var e Pubkey
 	math.ReadBits(key.X, e[:len(e)/2])
@@ -280,7 +290,6 @@ func EncodePubkey(key *sm2.PublicKey) Pubkey {
 	return e
 }
 
-// DecodePubkey reads an encoded secp256k1 public key.
 func DecodePubkey(curve elliptic.Curve, e Pubkey) (*sm2.PublicKey, error) {
 	p := &sm2.PublicKey{Curve: curve, X: new(big.Int), Y: new(big.Int)}
 	half := len(e) / 2

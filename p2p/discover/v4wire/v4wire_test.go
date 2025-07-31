@@ -17,13 +17,14 @@
 package v4wire
 
 import (
+	"crypto/rand"
 	"encoding/hex"
+	"github.com/ethereum/go-ethereum/gmsm"
 	"net"
 	"reflect"
 	"testing"
 
 	"github.com/davecgh/go-spew/spew"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
@@ -97,7 +98,7 @@ var testPackets = []struct {
 
 // This test checks that the decoder accepts packets according to EIP-8.
 func TestForwardCompatibility(t *testing.T) {
-	testkey, _ := crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
+	testkey, _ := gmsm.HexToSM2("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
 	wantNodeKey := EncodePubkey(&testkey.PublicKey)
 
 	for _, test := range testPackets {
@@ -130,3 +131,24 @@ func hexPubkey(h string) (ret Pubkey) {
 	copy(ret[:], b)
 	return ret
 }
+
+func TestDecodePubkey(t *testing.T) {
+	testkey, _ := gmsm.HexToSM2("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
+	wantNodeKey := EncodePubkey(&testkey.PublicKey)
+	pub, err := DecodePubkey(gmsm.P256Sm2(), wantNodeKey)
+	if err != nil {
+		t.Errorf("failed to decode pubkey: %v", err)
+	}
+	sig, err := testkey.Sign(rand.Reader, []byte("hello"), nil)
+	if err != nil {
+		t.Errorf("failed to sign: %v", err)
+	}
+	res := pub.Verify([]byte("hello"), sig)
+	t.Log(res)
+
+	res2 := gmsm.VerifySignature(wantNodeKey[:], []byte("hello"), sig)
+	t.Log(res2)
+}
+
+//6936e00c6bb7ccd3f7c9e8f498a879ed1250c81ce3fd6b7e48c4afd00beec523aebb38991cb0baa2a1dd24b99b0b95a03041e18d5b4757096c04eafb030527ef 176b6c91b7e13a514921f63f39f3ed64a07be186cec0437bcb6c489afa1eeaccf28da59da150f92680767c48f7b98fe727cd265e8264a70af7e6398f64ce5832 03f847b840c8cc49b6dc144f506d8c0eb25314e60d55450fd63c3502cce132e8553908890971fd2931365f2c67a264cdf0a937980b59d8eb48e3810f7e5058818f996c405f84688ae0eb
+//6936e00c6bb7ccd3f7c9e8f498a879ed1250c81ce3fd6b7e48c4afd00beec523aebb38991cb0baa2a1dd24b99b0b95a03041e18d5b4757096c04eafb030527ef 176b6c91b7e13a514921f63f39f3ed64a07be186cec0437bcb6c489afa1eeaccf28da59da150f92680767c48f7b98fe727cd265e8264a70af7e6398f64ce5832 03f847b840c8cc49b6dc144f506d8c0eb25314e60d55450fd63c3502cce132e8553908890971fd2931365f2c67a264cdf0a937980b59d8eb48e3810f7e5058818f996c405f84688ae0eb

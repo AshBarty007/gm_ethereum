@@ -455,16 +455,25 @@ func (h *handshakeState) handleAuthMsg(msg *authMsgV4, prv *sm2.PrivateKey) erro
 	}
 
 	// Check the signature.
-	//token, err := h.staticSharedSecret(prv)
-	//if err != nil {
-	//	return err
-	//}
-	//signedMsg := xor(token, h.initNonce)
+	token, err := h.staticSharedSecret(prv)
+	if err != nil {
+		return err
+	}
+	signedMsg := xor(token, h.initNonce)
+
 	//remoteRandomPub, err := crypto.Ecrecover(signedMsg, msg.Signature[:])
 	//if err != nil {
 	//	return err
 	//}
-	//h.remoteRandomPub, _ = importPublicKey(remoteRandomPub)
+
+	res := prv.Verify(signedMsg, msg.Signature[:])
+	if !res {
+		return errors.New("failed to verify signature")
+	}
+
+	remoteRandomPub := gmsm.CompressPubkey(&prv.PublicKey)
+	h.remoteRandomPub, _ = importPublicKey(remoteRandomPub)
+
 	return nil
 }
 
@@ -642,18 +651,8 @@ func (h *handshakeState) sealEIP8(msg interface{}) ([]byte, error) {
 
 // importPublicKey unmarshals 512 bit public keys.
 func importPublicKey(pubKey []byte) (*ecies.PublicKey, error) {
-	var pubKey65 []byte
-	switch len(pubKey) {
-	case 64:
-		// add 'uncompressed key' flag
-		pubKey65 = append([]byte{0x04}, pubKey...)
-	case 65:
-		pubKey65 = pubKey
-	default:
-		return nil, fmt.Errorf("invalid public key length %v (expect 64/65)", len(pubKey))
-	}
 	// TODO: fewer pointless conversions
-	pub, err := gmsm.UnmarshalPubkey(pubKey65)
+	pub, err := gmsm.UnmarshalPubkey(pubKey)
 	if err != nil {
 		return nil, err
 	}

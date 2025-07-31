@@ -27,6 +27,8 @@ const RecoveryIDOffset = 64
 // DigestLength sets the signature digest exact length
 const DigestLength = 32
 
+const PublicKeyLength = 33
+
 var (
 	sm2p256v1N, _  = new(big.Int).SetString("FFFFFFFEFFFFFFFFFFFFFFFFFFFFFFFF7203DF6B21C6052B53BBF40939D54123", 16)
 	sm2p256v1halfN = new(big.Int).Div(sm2p256v1N, big.NewInt(2))
@@ -267,7 +269,17 @@ func Sign(digestHash []byte, prv *sm2.PrivateKey) (sig []byte, err error) {
 }
 
 func VerifySignature(pubkey, digestHash, signature []byte) bool {
-	publicKey := DecompressPubkey(pubkey) //pubkey是不是压缩公钥
+	var publicKey *sm2.PublicKey
+	if len(pubkey) == PublicKeyLength {
+		publicKey = DecompressPubkey(pubkey)
+	} else if len(pubkey) == 65 {
+		publicKey = UnCompressBytesToPub(pubkey)
+	} else if len(pubkey) == 64 {
+		publicKey = UnCompressBytesToPub2(pubkey)
+	} else {
+		return false
+	}
+
 	return publicKey.Verify(digestHash, signature)
 }
 

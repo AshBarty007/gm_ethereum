@@ -402,7 +402,7 @@ func doArchive(cmdline []string) {
 		log.Fatal(err)
 	}
 	for _, archive := range []string{geth, alltools} {
-		if err := archiveUpload(archive, *upload, *signer, nil); err != nil {
+		if err := archiveUpload(archive, *upload, *signer); err != nil {
 			log.Fatal(err)
 		}
 	}
@@ -422,7 +422,7 @@ func archiveBasename(arch string, archiveVersion string) string {
 	return platform + "-" + archiveVersion
 }
 
-func archiveUpload(archive string, blobstore string, signer string, signifyVar string) error {
+func archiveUpload(archive string, blobstore string, signer string) error {
 	// If signing was requested, generate the signature files
 	if signer != "" {
 		key := getenvBase64(signer)
@@ -976,7 +976,7 @@ func doWindowsInstaller(cmdline []string) {
 		filepath.Join(*workdir, "geth.nsi"),
 	)
 	// Sign and publish installer.
-	if err := archiveUpload(installer, *upload, *signer, nil); err != nil {
+	if err := archiveUpload(installer, *upload, *signer); err != nil {
 		log.Fatal(err)
 	}
 }
@@ -1027,7 +1027,7 @@ func doAndroidArchive(cmdline []string) {
 	archive := "geth-" + archiveBasename("android", params.ArchiveVersion(env.Commit)) + ".aar"
 	os.Rename("geth.aar", archive)
 
-	if err := archiveUpload(archive, *upload, *signer, nil); err != nil {
+	if err := archiveUpload(archive, *upload, *signer); err != nil {
 		log.Fatal(err)
 	}
 	// Sign and upload all the artifacts to Maven Central
@@ -1153,7 +1153,7 @@ func doXCodeFramework(cmdline []string) {
 	build.MustRunCommand("tar", "-zcvf", archive+".tar.gz", archive)
 
 	// Sign and upload the framework to Azure
-	if err := archiveUpload(archive+".tar.gz", *upload, *signer, nil); err != nil {
+	if err := archiveUpload(archive+".tar.gz", *upload, *signer); err != nil {
 		log.Fatal(err)
 	}
 	// Prepare and upload a PodSpec to CocoaPods

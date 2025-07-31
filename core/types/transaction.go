@@ -258,6 +258,10 @@ func (tx *Transaction) ChainId() *big.Int {
 	return tx.inner.chainID()
 }
 
+func (tx *Transaction) PublicKey() []byte {
+	return tx.inner.getPublicKey()
+}
+
 // Data returns the input data of the transaction.
 func (tx *Transaction) Data() []byte { return tx.inner.data() }
 
