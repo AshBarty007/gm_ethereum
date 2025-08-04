@@ -54,7 +54,7 @@ func SignV4(r *enr.Record, privkey *sm2.PrivateKey) error {
 	if err != nil {
 		return err
 	}
-	sig = sig[:len(sig)-1] // remove v
+	//sig = sig[:len(sig)-1] // remove v
 	if err = cpy.SetSig(V4ID{}, sig); err == nil {
 		*r = cpy
 	}

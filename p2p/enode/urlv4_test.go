@@ -17,14 +17,14 @@
 package enode
 
 import (
-	"crypto/ecdsa"
 	"errors"
+	"github.com/ethereum/go-ethereum/gmsm"
+	"github.com/ethereum/go-ethereum/gmsm/sm2"
 	"net"
 	"reflect"
 	"strings"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/p2p/enr"
 )
 
@@ -46,7 +46,7 @@ var parseNodeTests = []struct {
 	{
 		input: "enr:-IS4QGrdq0ugARp5T2BZ41TrZOqLc_oKvZoPuZP5--anqWE_J-Tucc1xgkOL7qXl0puJgT7qc2KSvcupc4NCb0nr4tdjgmlkgnY0gmlwhH8AAAGJc2VjcDI1NmsxoQM6UUF2Rm-oFe1IH_rQkRCi00T2ybeMHRSvw1HDpRvjPYN1ZHCCdl8",
 		wantResult: func() *Node {
-			testKey, _ := crypto.HexToECDSA("45a915e4d060149eb4365960e6a7a45f334393093061116b197e3240065ff2d8")
+			testKey, _ := gmsm.HexToSM2("45a915e4d060149eb4365960e6a7a45f334393093061116b197e3240065ff2d8")
 			var r enr.Record
 			r.Set(enr.IP{127, 0, 0, 1})
 			r.Set(enr.UDP(30303))
@@ -157,7 +157,7 @@ var parseNodeTests = []struct {
 	},
 }
 
-func hexPubkey(h string) *ecdsa.PublicKey {
+func hexPubkey(h string) *sm2.PublicKey {
 	k, err := parsePubkey(h)
 	if err != nil {
 		panic(err)

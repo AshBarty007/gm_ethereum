@@ -284,6 +284,9 @@ func VerifySignature(pubkey, digestHash, signature []byte) bool {
 }
 
 func DecompressPubkey(pubkey []byte) *sm2.PublicKey {
+	if len(pubkey) != PublicKeyLength {
+		return nil
+	}
 	return sm2.Decompress(pubkey)
 }
 

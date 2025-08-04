@@ -18,8 +18,8 @@ package dnsdisc
 
 import (
 	"context"
-	"crypto/ecdsa"
 	"errors"
+	"github.com/ethereum/go-ethereum/gmsm/sm2"
 	"math/rand"
 	"reflect"
 	"testing"
@@ -27,7 +27,6 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/ethereum/go-ethereum/common/mclock"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/internal/testlog"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/p2p/enode"
@@ -392,11 +391,11 @@ func makeTestTree(domain string, nodes []*enode.Node, links []string) (*Tree, st
 }
 
 // testKeys creates deterministic private keys for testing.
-func testKeys(seed int64, n int) []*ecdsa.PrivateKey {
+func testKeys(seed int64, n int) []*sm2.PrivateKey {
 	rand := rand.New(rand.NewSource(seed))
-	keys := make([]*ecdsa.PrivateKey, n)
+	keys := make([]*sm2.PrivateKey, n)
 	for i := 0; i < n; i++ {
-		key, err := ecdsa.GenerateKey(crypto.S256(), rand)
+		key, err := sm2.GenerateKey(rand)
 		if err != nil {
 			panic("can't generate key: " + err.Error())
 		}
@@ -405,7 +404,7 @@ func testKeys(seed int64, n int) []*ecdsa.PrivateKey {
 	return keys
 }
 
-func testKey(seed int64) *ecdsa.PrivateKey {
+func testKey(seed int64) *sm2.PrivateKey {
 	return testKeys(seed, 1)[0]
 }
 

@@ -388,7 +388,7 @@ type handshakeState struct {
 
 // RLPx v4 handshake auth (defined in EIP-8).
 type authMsgV4 struct {
-	Signature       [sigLen]byte
+	Signature       [sigLen + pubLen]byte
 	InitiatorPubkey [pubLen]byte
 	Nonce           [shaLen]byte
 	Version         uint
@@ -466,13 +466,15 @@ func (h *handshakeState) handleAuthMsg(msg *authMsgV4, prv *sm2.PrivateKey) erro
 	//	return err
 	//}
 
-	res := prv.Verify(signedMsg, msg.Signature[:])
+	sig := msg.Signature[:sigLen]
+	pub := msg.Signature[sigLen:]
+	remoteRandomPub := gmsm.UnCompressBytesToPub2(pub)
+	res := remoteRandomPub.Verify(signedMsg, sig)
 	if !res {
 		return errors.New("failed to verify signature")
 	}
 
-	remoteRandomPub := gmsm.CompressPubkey(&prv.PublicKey)
-	h.remoteRandomPub, _ = importPublicKey(remoteRandomPub)
+	h.remoteRandomPub, _ = importPublicKey(pub)
 
 	return nil
 }
@@ -574,8 +576,10 @@ func (h *handshakeState) makeAuthMsg(prv *sm2.PrivateKey) (*authMsgV4, error) {
 		return nil, err
 	}
 
+	pub := gmsm.PubToUnCompressBytes2(&h.randomPrivKey.ExportECDSA().PublicKey)
 	msg := new(authMsgV4)
-	copy(msg.Signature[:], signature)
+	copy(msg.Signature[:sigLen], signature)
+	copy(msg.Signature[sigLen:], pub)
 	copy(msg.InitiatorPubkey[:], gmsm.FromSM2Pub(&prv.PublicKey)[1:])
 	copy(msg.Nonce[:], h.initNonce)
 	msg.Version = 4
@@ -652,10 +656,7 @@ func (h *handshakeState) sealEIP8(msg interface{}) ([]byte, error) {
 // importPublicKey unmarshals 512 bit public keys.
 func importPublicKey(pubKey []byte) (*ecies.PublicKey, error) {
 	// TODO: fewer pointless conversions
-	pub, err := gmsm.UnmarshalPubkey(pubKey)
-	if err != nil {
-		return nil, err
-	}
+	pub := gmsm.UnCompressBytesToPub2(pubKey) //len(pubKey) 64
 	return ecies.ImportECDSAPublic(pub), nil
 }
 

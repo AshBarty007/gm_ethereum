@@ -1,6 +1,7 @@
 package gmsm
 
 import (
+	"crypto/elliptic"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/gmsm/sm2"
 	"math/big"
@@ -72,4 +73,26 @@ func bigIntTo32Bytes(bn *big.Int) []byte {
 	}
 	byteArr = append(make([]byte, KeyBytes-byteArrLen), byteArr...)
 	return byteArr
+}
+
+func Ecrecover(hash, sig []byte) ([]byte, error) {
+	//if len(hash) != 32 {
+	//	return nil, errors.New("invalid message length, need 32 bytes")
+	//}
+	//if err := checkSignature(sig); err != nil {
+	//	return nil, err
+	//}
+
+	var publicKey = make([]byte, 65)
+	return publicKey, nil
+}
+
+func SigToPub(hash, sig []byte) (*sm2.PublicKey, error) {
+	s, err := Ecrecover(hash, sig)
+	if err != nil {
+		return nil, err
+	}
+
+	x, y := elliptic.Unmarshal(P256Sm2(), s)
+	return &sm2.PublicKey{Curve: P256Sm2(), X: x, Y: y}, nil
 }

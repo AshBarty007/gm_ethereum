@@ -18,12 +18,12 @@ package enode
 
 import (
 	"bytes"
-	"crypto/ecdsa"
 	"encoding/hex"
+	"github.com/ethereum/go-ethereum/gmsm"
+	"github.com/ethereum/go-ethereum/gmsm/sm2"
 	"math/big"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/stretchr/testify/assert"
@@ -31,7 +31,7 @@ import (
 )
 
 var (
-	privkey, _ = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
+	privkey, _ = gmsm.HexToSM2("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
 	pubkey     = &privkey.PublicKey
 )
 
@@ -48,7 +48,7 @@ func TestEmptyNodeID(t *testing.T) {
 
 // Checks that failure to sign leaves the record unmodified.
 func TestSignError(t *testing.T) {
-	invalidKey := &ecdsa.PrivateKey{D: new(big.Int), PublicKey: *pubkey}
+	invalidKey := &sm2.PrivateKey{D: new(big.Int), PublicKey: *pubkey}
 
 	var r enr.Record
 	emptyEnc, _ := rlp.EncodeToBytes(&r)
@@ -68,7 +68,17 @@ func TestGetSetSecp256k1(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var pk Secp256k1
+	var pk Sm2p256v1
 	require.NoError(t, r.Load(&pk))
 	assert.EqualValues(t, pubkey, &pk)
 }
+
+func TestSign(t *testing.T) {
+	v := Sm2p256v1(privkey.PublicKey)
+	t.Log(v.ENRKey())
+}
+
+// invalid sig
+// 65
+// 65f97bdb655c814a8f9755d748d599e2e6d6cf0fa352c93f617ab1e83cbc348924ce75628aea62679c63f1077e6326620ee32ae814dc3746e3925990d31def6100
+// Zfl722VcgUqPl1XXSNWZ4ubWzw-jUsk_YXqx6Dy8NIkkznViiupiZ5xj8Qd-YyZiDuMq6BTcN0bjklmQ0x3vYQA

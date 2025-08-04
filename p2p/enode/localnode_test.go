@@ -17,18 +17,18 @@
 package enode
 
 import (
+	"github.com/ethereum/go-ethereum/gmsm"
 	"math/rand"
 	"net"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/stretchr/testify/assert"
 )
 
 func newLocalNodeForTesting() (*LocalNode, *DB) {
 	db, _ := OpenDB("")
-	key, _ := crypto.GenerateKey()
+	key, _ := gmsm.GenerateKey()
 	return NewLocalNode(db, key), db
 }
 
@@ -78,7 +78,7 @@ func TestLocalNodeSeqPersist(t *testing.T) {
 
 	// Create a new instance with a different node key on the same database.
 	// This should reset the sequence number.
-	key, _ := crypto.GenerateKey()
+	key, _ := gmsm.GenerateKey()
 	ln3 := NewLocalNode(db, key)
 	if s := ln3.Node().Seq(); s < finalSeq {
 		t.Fatalf("wrong seq %d on instance with changed key, want >= %d", s, finalSeq)
