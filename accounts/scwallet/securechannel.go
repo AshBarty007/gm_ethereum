@@ -18,7 +18,6 @@ package scwallet
 
 import (
 	"bytes"
-	"crypto/aes"
 	"crypto/cipher"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -26,6 +25,7 @@ import (
 	"fmt"
 	"github.com/ethereum/go-ethereum/gmsm"
 	"github.com/ethereum/go-ethereum/gmsm/sm3"
+	"github.com/ethereum/go-ethereum/gmsm/sm4"
 
 	pcsc "github.com/gballet/go-libpcsclite"
 	"golang.org/x/crypto/pbkdf2"
@@ -276,7 +276,7 @@ func (s *SecureChannelSession) encryptAPDU(data []byte) ([]byte, error) {
 
 	ret := make([]byte, len(data))
 
-	a, err := aes.NewCipher(s.sessionEncKey)
+	a, err := sm4.NewCipher(s.sessionEncKey)
 	if err != nil {
 		return nil, err
 	}
@@ -295,7 +295,7 @@ func pad(data []byte, terminator byte) []byte {
 
 // decryptAPDU is an internal method that decrypts and deserializes an APDU.
 func (s *SecureChannelSession) decryptAPDU(data []byte) ([]byte, error) {
-	a, err := aes.NewCipher(s.sessionEncKey)
+	a, err := sm4.NewCipher(s.sessionEncKey)
 	if err != nil {
 		return nil, err
 	}
@@ -326,7 +326,7 @@ func unpad(data []byte, terminator byte) ([]byte, error) {
 // each message exchanged.
 func (s *SecureChannelSession) updateIV(meta, data []byte) error {
 	data = pad(data, 0)
-	a, err := aes.NewCipher(s.sessionMacKey)
+	a, err := sm4.NewCipher(s.sessionMacKey)
 	if err != nil {
 		return err
 	}

@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"encoding/base32"
 	"encoding/base64"
-	"encoding/hex"
 	"fmt"
 	"github.com/ethereum/go-ethereum/gmsm"
 	"github.com/ethereum/go-ethereum/gmsm/sm2"
@@ -327,7 +326,6 @@ func parseRoot(e string) (rootEntry, error) {
 	}
 	sigb, err := b64format.DecodeString(sig)
 	if err != nil || len(sigb) != gmsm.SignatureLength {
-		fmt.Println("sig: ", len(sigb), hex.EncodeToString(sigb), sig)
 		return rootEntry{}, entryError{"root", errInvalidSig}
 	}
 	return rootEntry{eroot, lroot, seq, sigb}, nil

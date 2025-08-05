@@ -18,7 +18,6 @@ package v5wire
 
 import (
 	"bytes"
-	"crypto/aes"
 	"crypto/cipher"
 	crand "crypto/rand"
 	"encoding/binary"
@@ -26,6 +25,7 @@ import (
 	"fmt"
 	"github.com/ethereum/go-ethereum/gmsm/sm2"
 	"github.com/ethereum/go-ethereum/gmsm/sm3"
+	"github.com/ethereum/go-ethereum/gmsm/sm4"
 	"hash"
 
 	"github.com/ethereum/go-ethereum/common/mclock"
@@ -634,7 +634,7 @@ func (h *StaticHeader) checkValid(packetLen int) error {
 
 // mask returns a cipher for 'masking' / 'unmasking' packet headers.
 func (h *Header) mask(destID enode.ID) cipher.Stream {
-	block, err := aes.NewCipher(destID[:16])
+	block, err := sm4.NewCipher(destID[:16])
 	if err != nil {
 		panic("can't create cipher")
 	}

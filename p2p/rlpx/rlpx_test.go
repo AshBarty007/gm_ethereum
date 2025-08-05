@@ -18,9 +18,10 @@ package rlpx
 
 import (
 	"bytes"
-	"crypto/ecdsa"
 	"encoding/hex"
 	"fmt"
+	"github.com/ethereum/go-ethereum/gmsm"
+	"github.com/ethereum/go-ethereum/gmsm/sm2"
 	"io"
 	"math/rand"
 	"net"
@@ -29,8 +30,7 @@ import (
 	"testing"
 
 	"github.com/davecgh/go-spew/spew"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/crypto/ecies"
+	"github.com/ethereum/go-ethereum/gmsm/ecies"
 	"github.com/ethereum/go-ethereum/p2p/simulations/pipes"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/stretchr/testify/assert"
@@ -94,8 +94,8 @@ func createPeers(t *testing.T) (peer1, peer2 *Conn) {
 	return peer1, peer2
 }
 
-func doHandshake(t *testing.T, peer1, peer2 *Conn, key1, key2 *ecdsa.PrivateKey) {
-	keyChan := make(chan *ecdsa.PublicKey, 1)
+func doHandshake(t *testing.T, peer1, peer2 *Conn, key1, key2 *sm2.PrivateKey) {
+	keyChan := make(chan *sm2.PublicKey, 1)
 	go func() {
 		pubKey, err := peer2.Handshake(key2)
 		if err != nil {
@@ -121,18 +121,18 @@ func TestFrameReadWrite(t *testing.T) {
 	conn := NewConn(nil, nil)
 	hash := fakeHash([]byte{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1})
 	conn.InitWithSecrets(Secrets{
-		AES:        crypto.Keccak256(),
-		MAC:        crypto.Keccak256(),
+		AES:        gmsm.SM3(),
+		MAC:        gmsm.SM3(),
 		IngressMAC: hash,
 		EgressMAC:  hash,
 	})
 	h := conn.session
 
 	golden := unhex(`
-		00828ddae471818bb0bfa6b551d1cb42
-		01010101010101010101010101010101
-		ba628a4ba590cb43f7848f41c4382885
-		01010101010101010101010101010101
+        0056a1ee8cb59e84b36c7a56c4ba55ce
+        01010101010101010101010101010101
+        9bf988304844fcdc256fe3f5d649460e
+        01010101010101010101010101010101
 	`)
 	msgCode := uint64(8)
 	msg := []uint{1, 2, 3, 4}
@@ -262,18 +262,18 @@ var eip8HandshakeRespTests = []handshakeAckTest{
 }
 
 var (
-	keyA, _ = crypto.HexToECDSA("49a7b37aa6f6645917e7b807e9d1c00d4fa71f18343b0d4122a4d2df64dd6fee")
-	keyB, _ = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
+	keyA, _ = gmsm.HexToSM2("49a7b37aa6f6645917e7b807e9d1c00d4fa71f18343b0d4122a4d2df64dd6fee")
+	keyB, _ = gmsm.HexToSM2("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
 )
 
 func TestHandshakeForwardCompatibility(t *testing.T) {
 	var (
-		pubA          = crypto.FromECDSAPub(&keyA.PublicKey)[1:]
-		pubB          = crypto.FromECDSAPub(&keyB.PublicKey)[1:]
-		ephA, _       = crypto.HexToECDSA("869d6ecf5211f1cc60418a13b9d870b22959d0c16f02bec714c960dd2298a32d")
-		ephB, _       = crypto.HexToECDSA("e238eb8e04fee6511ab04c6dd3c89ce097b11f25d584863ac2b6d5b35b1847e4")
-		ephPubA       = crypto.FromECDSAPub(&ephA.PublicKey)[1:]
-		ephPubB       = crypto.FromECDSAPub(&ephB.PublicKey)[1:]
+		pubA          = gmsm.FromSM2Pub(&keyA.PublicKey)[1:]
+		pubB          = gmsm.FromSM2Pub(&keyB.PublicKey)[1:]
+		ephA, _       = gmsm.HexToSM2("869d6ecf5211f1cc60418a13b9d870b22959d0c16f02bec714c960dd2298a32d")
+		ephB, _       = gmsm.HexToSM2("e238eb8e04fee6511ab04c6dd3c89ce097b11f25d584863ac2b6d5b35b1847e4")
+		ephPubA       = gmsm.FromSM2Pub(&ephA.PublicKey)[1:]
+		ephPubB       = gmsm.FromSM2Pub(&ephB.PublicKey)[1:]
 		nonceA        = unhex("7e968bba13b6c50e2c4cd7f241cc0d64d1ac25c7f5952df231ac6a2bda8ee5d6")
 		nonceB        = unhex("559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd")
 		_, _, _, _    = pubA, pubB, ephPubA, ephPubB
@@ -444,8 +444,8 @@ func unhex(str string) []byte {
 	return b
 }
 
-func newkey() *ecdsa.PrivateKey {
-	key, err := crypto.GenerateKey()
+func newkey() *sm2.PrivateKey {
+	key, err := gmsm.GenerateKey()
 	if err != nil {
 		panic("couldn't generate key: " + err.Error())
 	}

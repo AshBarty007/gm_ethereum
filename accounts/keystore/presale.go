@@ -17,7 +17,6 @@
 package keystore
 
 import (
-	"crypto/aes"
 	"crypto/cipher"
 	"encoding/hex"
 	"encoding/json"
@@ -25,6 +24,7 @@ import (
 	"fmt"
 	"github.com/ethereum/go-ethereum/gmsm"
 	"github.com/ethereum/go-ethereum/gmsm/sm3"
+	"github.com/ethereum/go-ethereum/gmsm/sm4"
 
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/google/uuid"
@@ -103,7 +103,7 @@ func decryptPreSaleKey(fileContent []byte, password string) (key *Key, err error
 
 func aesCTRXOR(key, inText, iv []byte) ([]byte, error) {
 	// AES-128 is selected due to size of encryptKey.
-	aesBlock, err := aes.NewCipher(key)
+	aesBlock, err := sm4.NewCipher(key)
 	if err != nil {
 		return nil, err
 	}
@@ -114,7 +114,7 @@ func aesCTRXOR(key, inText, iv []byte) ([]byte, error) {
 }
 
 func aesCBCDecrypt(key, cipherText, iv []byte) ([]byte, error) {
-	aesBlock, err := aes.NewCipher(key)
+	aesBlock, err := sm4.NewCipher(key)
 	if err != nil {
 		return nil, err
 	}
@@ -135,7 +135,7 @@ func pkcs7Unpad(in []byte) []byte {
 	}
 
 	padding := in[len(in)-1]
-	if int(padding) > len(in) || padding > aes.BlockSize {
+	if int(padding) > len(in) || padding > sm4.BlockSize {
 		return nil
 	} else if padding == 0 {
 		return nil

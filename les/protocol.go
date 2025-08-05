@@ -261,6 +261,8 @@ func (a *announceData) sign(privKey *sm2.PrivateKey) {
 	rlp, _ := rlp.EncodeToBytes(blockInfo{a.Hash, a.Number, a.Td})
 	sig, _ := gmsm.Sign(gmsm.SM3(rlp), privKey)
 	a.Update = a.Update.add("sign", sig)
+	pub := gmsm.FromSM2Pub(&privKey.PublicKey)
+	a.Update = a.Update.add("pub", pub)
 }
 
 // checkSignature verifies if the block announcement has a valid signature by the given pubKey
@@ -269,10 +271,15 @@ func (a *announceData) checkSignature(id enode.ID, update keyValueMap) error {
 	if err := update.get("sign", &sig); err != nil {
 		return err
 	}
-	rlp, _ := rlp.EncodeToBytes(blockInfo{a.Hash, a.Number, a.Td})
-	recPubkey, err := gmsm.SigToPub(gmsm.SM3(rlp), sig)
-	if err != nil {
+	var pub []byte
+	if err := update.get("pub", &pub); err != nil {
 		return err
+	}
+	recPubkey, _ := gmsm.UnmarshalPubkey(pub)
+	rlp, _ := rlp.EncodeToBytes(blockInfo{a.Hash, a.Number, a.Td})
+	res := recPubkey.Verify(rlp, sig)
+	if !res {
+		return errors.New("invalid signature or publicKey")
 	}
 	if id == enode.PubkeyToIDV4(recPubkey) {
 		return nil

@@ -17,13 +17,13 @@
 package v5wire
 
 import (
-	"crypto/aes"
 	"crypto/cipher"
 	"crypto/elliptic"
 	"errors"
 	"fmt"
 	"github.com/ethereum/go-ethereum/gmsm"
 	"github.com/ethereum/go-ethereum/gmsm/sm2"
+	"github.com/ethereum/go-ethereum/gmsm/sm4"
 	"hash"
 
 	"github.com/ethereum/go-ethereum/common/math"
@@ -151,7 +151,7 @@ func ecdh(privkey *sm2.PrivateKey, pubkey *sm2.PublicKey) []byte {
 // appended to dest, which must not overlap with plaintext. The resulting ciphertext is 16
 // bytes longer than plaintext because it contains an authentication tag.
 func encryptGCM(dest, key, nonce, plaintext, authData []byte) ([]byte, error) {
-	block, err := aes.NewCipher(key)
+	block, err := sm4.NewCipher(key)
 	if err != nil {
 		panic(fmt.Errorf("can't create block cipher: %v", err))
 	}
@@ -164,7 +164,7 @@ func encryptGCM(dest, key, nonce, plaintext, authData []byte) ([]byte, error) {
 
 // decryptGCM decrypts ct using AES-GCM with the given key and nonce.
 func decryptGCM(key, nonce, ct, authData []byte) ([]byte, error) {
-	block, err := aes.NewCipher(key)
+	block, err := sm4.NewCipher(key)
 	if err != nil {
 		return nil, fmt.Errorf("can't create block cipher: %v", err)
 	}

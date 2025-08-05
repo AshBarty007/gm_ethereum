@@ -27,13 +27,13 @@ package keystore
 
 import (
 	"bytes"
-	"crypto/aes"
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"github.com/ethereum/go-ethereum/gmsm"
 	"github.com/ethereum/go-ethereum/gmsm/sm3"
+	"github.com/ethereum/go-ethereum/gmsm/sm4"
 	"io"
 	"os"
 	"path/filepath"
@@ -148,7 +148,7 @@ func EncryptDataV3(data, auth []byte, scryptN, scryptP int) (CryptoJSON, error) 
 	}
 	encryptKey := derivedKey[:16]
 
-	iv := make([]byte, aes.BlockSize) // 16
+	iv := make([]byte, sm4.BlockSize) // 16
 	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
 		panic("reading from crypto/rand failed: " + err.Error())
 	}

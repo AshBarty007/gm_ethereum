@@ -19,7 +19,6 @@ package rlpx
 
 import (
 	"bytes"
-	"crypto/aes"
 	"crypto/cipher"
 	"crypto/elliptic"
 	"crypto/hmac"
@@ -30,6 +29,7 @@ import (
 	"github.com/ethereum/go-ethereum/gmsm"
 	"github.com/ethereum/go-ethereum/gmsm/sm2"
 	"github.com/ethereum/go-ethereum/gmsm/sm3"
+	"github.com/ethereum/go-ethereum/gmsm/sm4"
 	"hash"
 	"io"
 	mrand "math/rand"
@@ -323,11 +323,11 @@ func (c *Conn) InitWithSecrets(sec Secrets) {
 	if c.session != nil {
 		panic("can't handshake twice")
 	}
-	macc, err := aes.NewCipher(sec.MAC)
+	macc, err := sm4.NewCipher(sec.MAC[:16])
 	if err != nil {
 		panic("invalid MAC secret: " + err.Error())
 	}
-	encc, err := aes.NewCipher(sec.AES)
+	encc, err := sm4.NewCipher(sec.AES[:16])
 	if err != nil {
 		panic("invalid AES secret: " + err.Error())
 	}

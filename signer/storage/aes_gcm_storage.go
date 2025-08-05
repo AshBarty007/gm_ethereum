@@ -17,10 +17,10 @@
 package storage
 
 import (
-	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
 	"encoding/json"
+	"github.com/ethereum/go-ethereum/gmsm/sm4"
 	"io"
 	"os"
 
@@ -145,7 +145,7 @@ func (s *AESEncryptedStorage) writeEncryptedStorage(creds map[string]storedCrede
 // The 'additionalData' is used to place the (plaintext) KV-store key into the V,
 // to prevent the possibility to alter a K, or swap two entries in the KV store with each other.
 func encrypt(key []byte, plaintext []byte, additionalData []byte) ([]byte, []byte, error) {
-	block, err := aes.NewCipher(key)
+	block, err := sm4.NewCipher(key)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -162,7 +162,7 @@ func encrypt(key []byte, plaintext []byte, additionalData []byte) ([]byte, []byt
 }
 
 func decrypt(key []byte, nonce []byte, ciphertext []byte, additionalData []byte) ([]byte, error) {
-	block, err := aes.NewCipher(key)
+	block, err := sm4.NewCipher(key)
 	if err != nil {
 		return nil, err
 	}

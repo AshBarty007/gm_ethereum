@@ -19,12 +19,12 @@ package les
 import (
 	"crypto/rand"
 	"fmt"
+	"github.com/ethereum/go-ethereum/gmsm"
 	"net"
 	"sync/atomic"
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/p2p"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 )
@@ -153,7 +153,7 @@ func newTestServerPeer(t *testing.T, blocks int, protocol int, indexFn indexerCa
 		nopruning: true,
 	}
 	s, _, teardown := newClientServerEnv(t, netconfig)
-	key, err := crypto.GenerateKey()
+	key, err := gmsm.GenerateKey()
 	if err != nil {
 		t.Fatal("generate key err:", err)
 	}
