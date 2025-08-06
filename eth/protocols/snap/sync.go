@@ -42,7 +42,6 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/msgrate"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/trie"
-	"golang.org/x/crypto/sha3"
 )
 
 var (
@@ -2641,7 +2640,7 @@ func (s *Syncer) OnTrieNodes(peer SyncPeer, id uint64, trienodes [][]byte) error
 
 	// Cross reference the requested trienodes with the response to find gaps
 	// that the serving node is missing
-	hasher := sha3.NewLegacyKeccak256().(gmsm.Sm3State)
+	hasher := sm3.New().(gmsm.Sm3State)
 	hash := make([]byte, 32)
 
 	nodes := make([][]byte, len(req.hashes))

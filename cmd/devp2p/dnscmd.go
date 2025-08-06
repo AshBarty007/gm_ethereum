@@ -17,7 +17,6 @@
 package main
 
 import (
-	"crypto/ecdsa"
 	"encoding/json"
 	"fmt"
 	"github.com/ethereum/go-ethereum/gmsm/sm2"

@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"crypto/x509/pkix"
 	"encoding/asn1"
+	"encoding/hex"
 	"encoding/pem"
 	"fmt"
 	"github.com/ethereum/go-ethereum/gmsm/sm2"
@@ -400,4 +401,33 @@ func TestCopyBytes(t *testing.T) {
 	copy(l[dataLen*2:], data)
 	copy(l[dataLen*3:], data)
 	fmt.Println("l: ", len(l), string(l))
+}
+
+func TestOK(t *testing.T) {
+	key, _ := hex.DecodeString("39725efee3fb28614de3bacaffe4cc4bd8c436257e2c8bb887c4b5c4be45e76d")
+	pri, _ := ToSM2(key)
+	t.Log("pri: ", pri)
+	//pub1 := PubToUnCompressBytes(&pri.PublicKey)
+	//fmt.Println("pub1: ", len(pub1), hex.EncodeToString(pub1))
+	pub2 := CompressPubkey(&pri.PublicKey)
+	fmt.Println("pub2: ", len(pub2), hex.EncodeToString(pub2)) //013ce455fd10aff3f6ebf82a10270829b93b5e65aeebac604efcaba66e4c8a6091
+
+	pb, _ := hex.DecodeString("033ce455fd10aff3f6ebf82a10270829b93b5e65aeebac604efcaba66e4c8a6091")
+	pub := DecompressPubkey(pb)
+	t.Logf("pub: %v", pub)
+	sig, _ := pri.Sign(rand.Reader, []byte("msg"), nil)
+	res := pub.Verify([]byte("msg"), sig)
+	t.Logf("res: %v", res)
+
+	//fmt.Println("debug tx")
+	//fmt.Println("ChainId", tx.ChainId())
+	//fmt.Println("Nonce", tx.Nonce())
+	//fmt.Println("Gas", tx.Gas())
+	//fmt.Println("GasPrice", tx.GasPrice())
+	//fmt.Println("To", tx.To())
+	//fmt.Println("Value", tx.Value())
+	//fmt.Println("Data", tx.Data())
+	//m := hex.EncodeToString(tx.PublicKey())
+	//fmt.Println("PublicKey", len(m), m)
+	//fmt.Println("====rnd=====")
 }

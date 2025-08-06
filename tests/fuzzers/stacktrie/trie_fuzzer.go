@@ -21,13 +21,13 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/gmsm/sm3"
 	"hash"
 	"io"
 	"sort"
 
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/trie"
-	"golang.org/x/crypto/sha3"
 )
 
 type fuzzer struct {
@@ -115,8 +115,10 @@ func (k kvs) Swap(i, j int) {
 
 // The function must return
 // 1 if the fuzzer should increase priority of the
-//    given input during subsequent fuzzing (for example, the input is lexically
-//    correct and was parsed successfully);
+//
+//	given input during subsequent fuzzing (for example, the input is lexically
+//	correct and was parsed successfully);
+//
 // -1 if the input must not be added to corpus even if gives new coverage; and
 // 0  otherwise
 // other values are reserved for future use.
@@ -140,10 +142,10 @@ func Debug(data []byte) int {
 func (f *fuzzer) fuzz() int {
 	// This spongeDb is used to check the sequence of disk-db-writes
 	var (
-		spongeA     = &spongeDb{sponge: sha3.NewLegacyKeccak256()}
+		spongeA     = &spongeDb{sponge: sm3.New()}
 		dbA         = trie.NewDatabase(spongeA)
 		trieA       = trie.NewEmpty(dbA)
-		spongeB     = &spongeDb{sponge: sha3.NewLegacyKeccak256()}
+		spongeB     = &spongeDb{sponge: sm3.New()}
 		trieB       = trie.NewStackTrie(spongeB)
 		vals        kvs
 		useful      bool
