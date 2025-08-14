@@ -444,7 +444,7 @@ func (g *Genesis) MustCommit(db ethdb.Database) *types.Block {
 
 // DefaultGenesisBlock returns the Ethereum main net genesis block.
 func DefaultGenesisBlock() *Genesis {
-	faucet := common.HexToAddress("0xE25583099BA105D9ec0A67f5Ae86D90e50036425")
+	faucet := common.HexToAddress("0x30e938b0630c02f394d17925fdb5fb046f70d452")
 	return &Genesis{
 		Config:     params.MainnetChainConfig,
 		Nonce:      66,
@@ -453,17 +453,16 @@ func DefaultGenesisBlock() *Genesis {
 		Difficulty: big.NewInt(1),
 		//Alloc:      decodePrealloc(mainnetAllocData),
 		Alloc: map[common.Address]GenesisAccount{
-			common.BytesToAddress([]byte{1}):                                  {Balance: big.NewInt(1)}, // ECRecover
-			common.BytesToAddress([]byte{2}):                                  {Balance: big.NewInt(1)}, // SHA256
-			common.BytesToAddress([]byte{3}):                                  {Balance: big.NewInt(1)}, // RIPEMD
-			common.BytesToAddress([]byte{4}):                                  {Balance: big.NewInt(1)}, // Identity
-			common.BytesToAddress([]byte{5}):                                  {Balance: big.NewInt(1)}, // ModExp
-			common.BytesToAddress([]byte{6}):                                  {Balance: big.NewInt(1)}, // ECAdd
-			common.BytesToAddress([]byte{7}):                                  {Balance: big.NewInt(1)}, // ECScalarMul
-			common.BytesToAddress([]byte{8}):                                  {Balance: big.NewInt(1)}, // ECPairing
-			common.BytesToAddress([]byte{9}):                                  {Balance: big.NewInt(1)}, // BLAKE2b
-			faucet:                                                            {Balance: new(big.Int).Sub(new(big.Int).Lsh(big.NewInt(1), 256), big.NewInt(9))},
-			common.HexToAddress("0x4ba423dF252fd8909193Af5512C1f53f456a164a"): {Balance: big.NewInt(100000000)},
+			common.BytesToAddress([]byte{1}): {Balance: big.NewInt(1)}, // ECRecover
+			common.BytesToAddress([]byte{2}): {Balance: big.NewInt(1)}, // SHA256
+			common.BytesToAddress([]byte{3}): {Balance: big.NewInt(1)}, // RIPEMD
+			common.BytesToAddress([]byte{4}): {Balance: big.NewInt(1)}, // Identity
+			common.BytesToAddress([]byte{5}): {Balance: big.NewInt(1)}, // ModExp
+			common.BytesToAddress([]byte{6}): {Balance: big.NewInt(1)}, // ECAdd
+			common.BytesToAddress([]byte{7}): {Balance: big.NewInt(1)}, // ECScalarMul
+			common.BytesToAddress([]byte{8}): {Balance: big.NewInt(1)}, // ECPairing
+			common.BytesToAddress([]byte{9}): {Balance: big.NewInt(1)}, // BLAKE2b
+			faucet:                           {Balance: new(big.Int).Sub(new(big.Int).Lsh(big.NewInt(1), 256), big.NewInt(9))},
 		},
 	}
 }

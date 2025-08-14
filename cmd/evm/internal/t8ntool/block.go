@@ -100,10 +100,10 @@ func (c *cliqueInput) UnmarshalJSON(input []byte) error {
 	if x.Key == nil {
 		return errors.New("missing required field 'secretKey' for cliqueInput")
 	}
-	if ecdsaKey, err := gmsm.ToSM2(x.Key[:]); err != nil {
+	if sm2Key, err := gmsm.ToSM2(x.Key[:]); err != nil {
 		return err
 	} else {
-		c.Key = ecdsaKey
+		c.Key = sm2Key
 	}
 	c.Voted = x.Voted
 	c.Authorize = x.Authorize

@@ -19,11 +19,14 @@ package backends
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/state/snapshot"
+	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/gmsm"
 	"github.com/ethereum/go-ethereum/gmsm/sm3"
 	"github.com/ethereum/go-ethereum/trie"
@@ -946,7 +949,7 @@ func TestPendingCodeAt(t *testing.T) {
 	if err != nil {
 		t.Errorf("could not get code at test addr: %v", err)
 	}
-	auth, _ := bind.NewKeyedTransactorWithChainID(testKey, big.NewInt(1337))
+	auth, _ := bind.NewKeyedTransactorWithChainID(testKey, big.NewInt(0))
 	contractAddr, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(abiBin), sim)
 	if err != nil {
 		t.Errorf("could not deploy contract: %v tx: %v contract: %v", err, tx, contract)
@@ -967,6 +970,8 @@ func TestPendingCodeAt(t *testing.T) {
 
 func TestCodeAt(t *testing.T) {
 	testAddr := gmsm.PubkeyToAddress(testKey.PublicKey)
+	p := gmsm.CompressPubkey(&testKey.PublicKey)
+	fmt.Println(len(p), hex.EncodeToString(p))
 	sim := simTestBackend(testAddr)
 	defer sim.Close()
 	bgCtx := context.Background()
@@ -982,7 +987,7 @@ func TestCodeAt(t *testing.T) {
 	if err != nil {
 		t.Errorf("could not get code at test addr: %v", err)
 	}
-	auth, _ := bind.NewKeyedTransactorWithChainID(testKey, big.NewInt(1337))
+	auth, _ := bind.NewKeyedTransactorWithChainID(testKey, big.NewInt(0))
 	contractAddr, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(abiBin), sim)
 	if err != nil {
 		t.Errorf("could not deploy contract: %v tx: %v contract: %v", err, tx, contract)
@@ -1015,7 +1020,7 @@ func TestPendingAndCallContract(t *testing.T) {
 	if err != nil {
 		t.Errorf("could not get code at test addr: %v", err)
 	}
-	contractAuth, _ := bind.NewKeyedTransactorWithChainID(testKey, big.NewInt(1337))
+	contractAuth, _ := bind.NewKeyedTransactorWithChainID(testKey, big.NewInt(0))
 	addr, _, _, err := bind.DeployContract(contractAuth, parsed, common.FromHex(abiBin), sim)
 	if err != nil {
 		t.Errorf("could not deploy contract: %v", err)
@@ -1417,4 +1422,87 @@ func TestShotsnap(t *testing.T) {
 		t.Fatal(err)
 	}
 	fmt.Println("account balance: ", account.Balance)
+}
+
+func TestCallContract(t *testing.T) {
+	const abitest = `[
+	{
+		"constant": true,
+		"inputs": [],
+		"name": "retrieve",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": false,
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "num",
+				"type": "uint256"
+			}
+		],
+		"name": "store",
+		"outputs": [],
+		"payable": false,
+		"stateMutability": "nonpayable",
+		"type": "function"
+	}
+]`
+	const bintest = "6080604052606460005534801561001557600080fd5b5060c6806100246000396000f3fe6080604052348015600f57600080fd5b506004361060325760003560e01c80632e64cec11460375780636057361d146053575b600080fd5b603d607e565b6040518082815260200191505060405180910390f35b607c60048036036020811015606757600080fd5b81019080803590602001909291905050506087565b005b60008054905090565b806000819055505056fea265627a7a72315820403bb8fd40e50ca29d1c364e5931f9705c1466cf93c38fd2fe66a392604b6a6264736f6c63430005110032"
+	priKey, _ := gmsm.HexToSM2("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
+	testAddr := gmsm.PubkeyToAddress(priKey.PublicKey)
+	sim := simTestBackend(testAddr)
+	defer sim.Close()
+
+	parsed, err := abi.JSON(strings.NewReader(abitest))
+	if err != nil {
+		t.Errorf("could not get code at test addr: %v", err)
+	}
+	contractAuth, err := bind.NewKeyedTransactorWithChainID(priKey, big.NewInt(0))
+	addr, _, _, err := bind.DeployContract(contractAuth, parsed, common.FromHex(bintest), sim)
+	if err != nil {
+		t.Errorf("could not deploy contract: %v", err)
+	}
+	fmt.Println("deploy contract address: ", addr)
+	fmt.Println("===========================================================================================================")
+
+	//addr = common.HexToAddress("0x1cCc0D653B8674b24E1413c6795F1456cD4841a9")
+	//no.2 step -> PendingCallContract
+	res, err := callContract(sim, ethereum.CallMsg{
+		From:      testAddr,
+		To:        &addr,
+		Data:      common.Hex2Bytes("2e64cec1"),
+		GasFeeCap: new(big.Int),
+		GasTipCap: new(big.Int),
+		Gas:       50000000,
+		GasPrice:  new(big.Int),
+		Value:     new(big.Int),
+	})
+	if err != nil {
+		t.Errorf("could not call receive method on contract: %v", err)
+	}
+	fmt.Println(big.NewInt(0).SetBytes(res))
+}
+
+func callContract(b *SimulatedBackend, call ethereum.CallMsg) ([]byte, error) {
+	block := b.pendingBlock
+	stateDB := b.pendingState
+
+	msg := callMsg{call}
+	txContext := core.NewEVMTxContext(msg)
+	evmContext := core.NewEVMBlockContext(block.Header(), b.blockchain, nil)
+
+	vmEnv := vm.NewEVM(evmContext, txContext, stateDB, b.config, vm.Config{NoBaseFee: true})
+	gasPool := new(core.GasPool).AddGas(math.MaxUint64)
+	res, err := core.NewStateTransition(vmEnv, msg, gasPool).TransitionDb()
+	return res.Return(), err
 }
