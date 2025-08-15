@@ -18,6 +18,7 @@ package vm
 
 import (
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/gmsm/sm3"
 	"github.com/ethereum/go-ethereum/params"
 	"math/big"
 )
@@ -34,7 +35,7 @@ type PrecompiledContract interface {
 // contracts used in the Frontier and Homestead releases.
 var PrecompiledContractsHomestead = map[common.Address]PrecompiledContract{
 	//common.BytesToAddress([]byte{1}): &ecrecover{},
-	//common.BytesToAddress([]byte{2}): &sha256hash{},
+	common.BytesToAddress([]byte{2}): &sm3hash{},
 	//common.BytesToAddress([]byte{3}): &ripemd160hash{},
 	//common.BytesToAddress([]byte{4}): &dataCopy{},
 }
@@ -43,7 +44,7 @@ var PrecompiledContractsHomestead = map[common.Address]PrecompiledContract{
 // contracts used in the Byzantium release.
 var PrecompiledContractsByzantium = map[common.Address]PrecompiledContract{
 	//common.BytesToAddress([]byte{1}): &ecrecover{},
-	//common.BytesToAddress([]byte{2}): &sha256hash{},
+	common.BytesToAddress([]byte{2}): &sm3hash{},
 	//common.BytesToAddress([]byte{3}): &ripemd160hash{},
 	//common.BytesToAddress([]byte{4}): &dataCopy{},
 	//common.BytesToAddress([]byte{5}): &bigModExp{eip2565: false},
@@ -56,7 +57,7 @@ var PrecompiledContractsByzantium = map[common.Address]PrecompiledContract{
 // contracts used in the Istanbul release.
 var PrecompiledContractsIstanbul = map[common.Address]PrecompiledContract{
 	//common.BytesToAddress([]byte{1}): &ecrecover{},
-	//common.BytesToAddress([]byte{2}): &sha256hash{},
+	common.BytesToAddress([]byte{2}): &sm3hash{},
 	//common.BytesToAddress([]byte{3}): &ripemd160hash{},
 	//common.BytesToAddress([]byte{4}): &dataCopy{},
 	//common.BytesToAddress([]byte{5}): &bigModExp{eip2565: false},
@@ -70,7 +71,7 @@ var PrecompiledContractsIstanbul = map[common.Address]PrecompiledContract{
 // contracts used in the Berlin release.
 var PrecompiledContractsBerlin = map[common.Address]PrecompiledContract{
 	//common.BytesToAddress([]byte{1}): &ecrecover{},
-	//common.BytesToAddress([]byte{2}): &sha256hash{},
+	common.BytesToAddress([]byte{2}): &sm3hash{},
 	//common.BytesToAddress([]byte{3}): &ripemd160hash{},
 	//common.BytesToAddress([]byte{4}): &dataCopy{},
 	//common.BytesToAddress([]byte{5}): &bigModExp{eip2565: true},
@@ -143,6 +144,20 @@ func RunPrecompiledContract(p PrecompiledContract, input []byte, suppliedGas uin
 	suppliedGas -= gasCost
 	output, err := p.Run(input)
 	return output, suppliedGas, err
+}
+
+type sm3hash struct{}
+
+// RequiredGas returns the gas required to execute the pre-compiled contract.
+//
+// This method does not require any overflow checking as the input size gas costs
+// required for anything significant is so high it's impossible to pay for.
+func (c *sm3hash) RequiredGas(input []byte) uint64 {
+	return uint64(len(input)+31)/32*params.Sha256PerWordGas + params.Sha256BaseGas
+}
+func (c *sm3hash) Run(input []byte) ([]byte, error) {
+	h := sm3.Sm3Sum(input)
+	return h[:], nil
 }
 
 //// ECRECOVER implemented as a native contract.
