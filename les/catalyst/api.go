@@ -49,22 +49,29 @@ type ConsensusAPI struct {
 // NewConsensusAPI creates a new consensus api for the given backend.
 // The underlying blockchain needs to have a valid terminal total difficulty set.
 func NewConsensusAPI(les *les.LightEthereum) *ConsensusAPI {
-	if les.BlockChain().Config().TerminalTotalDifficulty == nil {
-		log.Warn("Catalyst started without valid total difficulty")
-	}
+	//if les.BlockChain().Config().TerminalTotalDifficulty == nil {
+	//	log.Warn("Catalyst started without valid total difficulty")
+	//}
 	return &ConsensusAPI{les: les}
 }
 
 // ForkchoiceUpdatedV1 has several responsibilities:
 // If the method is called with an empty head block:
-// 		we return success, which can be used to check if the catalyst mode is enabled
+//
+//	we return success, which can be used to check if the catalyst mode is enabled
+//
 // If the total difficulty was not reached:
-// 		we return INVALID
+//
+//	we return INVALID
+//
 // If the finalizedBlockHash is set:
-// 		we check if we have the finalizedBlockHash in our db, if not we start a sync
+//
+//	we check if we have the finalizedBlockHash in our db, if not we start a sync
+//
 // We try to set our blockchain to the headBlock
 // If there are payloadAttributes:
-//      we return an error since block creation is not supported in les mode
+//
+//	we return an error since block creation is not supported in les mode
 func (api *ConsensusAPI) ForkchoiceUpdatedV1(heads beacon.ForkchoiceStateV1, payloadAttributes *beacon.PayloadAttributesV1) (beacon.ForkChoiceResponse, error) {
 	if heads.HeadBlockHash == (common.Hash{}) {
 		log.Warn("Forkchoice requested update to zero hash")

@@ -148,12 +148,13 @@ func (beacon *Beacon) VerifyHeaders(chain consensus.ChainHeaderReader, headers [
 			newDone, newResult = beacon.verifyHeaders(chain, postHeaders, preHeaders[len(preHeaders)-1])
 		)
 		// Verify that pre-merge headers don't overflow the TTD
-		if index, err := verifyTerminalPoWBlock(chain, preHeaders); err != nil {
-			// Mark all subsequent pow headers with the error.
-			for i := index; i < len(preHeaders); i++ {
-				errors[i], done[i] = err, true
-			}
-		}
+		//if index, err := verifyTerminalPoWBlock(chain, preHeaders); err != nil {
+		//	// Mark all subsequent pow headers with the error.
+		//	for i := index; i < len(preHeaders); i++ {
+		//		errors[i], done[i] = err, true
+		//	}
+		//}
+
 		// Collect the results
 		for {
 			for ; done[out]; out++ {
@@ -181,32 +182,32 @@ func (beacon *Beacon) VerifyHeaders(chain consensus.ChainHeaderReader, headers [
 	return abort, results
 }
 
-// verifyTerminalPoWBlock verifies that the preHeaders conform to the specification
-// wrt. their total difficulty.
-// It expects:
-// - preHeaders to be at least 1 element
-// - the parent of the header element to be stored in the chain correctly
-// - the preHeaders to have a set difficulty
-// - the last element to be the terminal block
-func verifyTerminalPoWBlock(chain consensus.ChainHeaderReader, preHeaders []*types.Header) (int, error) {
-	td := chain.GetTd(preHeaders[0].ParentHash, preHeaders[0].Number.Uint64()-1)
-	if td == nil {
-		return 0, consensus.ErrUnknownAncestor
-	}
-	td = new(big.Int).Set(td)
-	// Check that all blocks before the last one are below the TTD
-	for i, head := range preHeaders {
-		if td.Cmp(chain.Config().TerminalTotalDifficulty) >= 0 {
-			return i, consensus.ErrInvalidTerminalBlock
-		}
-		td.Add(td, head.Difficulty)
-	}
-	// Check that the last block is the terminal block
-	if td.Cmp(chain.Config().TerminalTotalDifficulty) < 0 {
-		return len(preHeaders) - 1, consensus.ErrInvalidTerminalBlock
-	}
-	return 0, nil
-}
+//// verifyTerminalPoWBlock verifies that the preHeaders conform to the specification
+//// wrt. their total difficulty.
+//// It expects:
+//// - preHeaders to be at least 1 element
+//// - the parent of the header element to be stored in the chain correctly
+//// - the preHeaders to have a set difficulty
+//// - the last element to be the terminal block
+//func verifyTerminalPoWBlock(chain consensus.ChainHeaderReader, preHeaders []*types.Header) (int, error) {
+//	td := chain.GetTd(preHeaders[0].ParentHash, preHeaders[0].Number.Uint64()-1)
+//	if td == nil {
+//		return 0, consensus.ErrUnknownAncestor
+//	}
+//	td = new(big.Int).Set(td)
+//	// Check that all blocks before the last one are below the TTD
+//	for i, head := range preHeaders {
+//		if td.Cmp(chain.Config().TerminalTotalDifficulty) >= 0 {
+//			return i, consensus.ErrInvalidTerminalBlock
+//		}
+//		td.Add(td, head.Difficulty)
+//	}
+//	// Check that the last block is the terminal block
+//	if td.Cmp(chain.Config().TerminalTotalDifficulty) < 0 {
+//		return len(preHeaders) - 1, consensus.ErrInvalidTerminalBlock
+//	}
+//	return 0, nil
+//}
 
 // VerifyUncles verifies that the given block's uncles conform to the consensus
 // rules of the Ethereum consensus engine.
@@ -224,10 +225,11 @@ func (beacon *Beacon) VerifyUncles(chain consensus.ChainReader, block *types.Blo
 // verifyHeader checks whether a header conforms to the consensus rules of the
 // stock Ethereum consensus engine. The difference between the beacon and classic is
 // (a) The following fields are expected to be constants:
-//     - difficulty is expected to be 0
-// 	   - nonce is expected to be 0
-//     - unclehash is expected to be Hash(emptyHeader)
+//   - difficulty is expected to be 0
+//   - nonce is expected to be 0
+//   - unclehash is expected to be Hash(emptyHeader)
 //     to be the desired constants
+//
 // (b) we don't verify if a block is in the future anymore
 // (c) the extradata is limited to 32 bytes
 func (beacon *Beacon) verifyHeader(chain consensus.ChainHeaderReader, header, parent *types.Header) error {
@@ -419,12 +421,14 @@ func (beacon *Beacon) SetThreads(threads int) {
 // It depends on the parentHash already being stored in the database.
 // If the parentHash is not stored in the database a UnknownAncestor error is returned.
 func IsTTDReached(chain consensus.ChainHeaderReader, parentHash common.Hash, number uint64) (bool, error) {
-	if chain.Config().TerminalTotalDifficulty == nil {
-		return false, nil
-	}
-	td := chain.GetTd(parentHash, number)
-	if td == nil {
-		return false, consensus.ErrUnknownAncestor
-	}
-	return td.Cmp(chain.Config().TerminalTotalDifficulty) >= 0, nil
+	//if chain.Config().TerminalTotalDifficulty == nil {
+	//	return false, nil
+	//}
+	//td := chain.GetTd(parentHash, number)
+	//if td == nil {
+	//	return false, consensus.ErrUnknownAncestor
+	//}
+	//return td.Cmp(chain.Config().TerminalTotalDifficulty) >= 0, nil
+
+	return false, nil
 }

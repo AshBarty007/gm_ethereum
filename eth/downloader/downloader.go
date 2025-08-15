@@ -330,8 +330,8 @@ func (d *Downloader) UnregisterPeer(id string) error {
 
 // LegacySync tries to sync up our local block chain with a remote peer, both
 // adding various sanity checks as well as wrapping it with various log entries.
-func (d *Downloader) LegacySync(id string, head common.Hash, td, ttd *big.Int, mode SyncMode) error {
-	err := d.synchronise(id, head, td, ttd, mode, false, nil)
+func (d *Downloader) LegacySync(id string, head common.Hash, td *big.Int, mode SyncMode) error {
+	err := d.synchronise(id, head, td, mode, false, nil)
 
 	switch err {
 	case nil, errBusy, errCanceled:
@@ -360,7 +360,7 @@ func (d *Downloader) LegacySync(id string, head common.Hash, td, ttd *big.Int, m
 // synchronise will select the peer and use it for synchronising. If an empty string is given
 // it will use the best peer possible and synchronize if its TD is higher than our own. If any of the
 // checks fail an error will be returned. This method is synchronous
-func (d *Downloader) synchronise(id string, hash common.Hash, td, ttd *big.Int, mode SyncMode, beaconMode bool, beaconPing chan struct{}) error {
+func (d *Downloader) synchronise(id string, hash common.Hash, td *big.Int, mode SyncMode, beaconMode bool, beaconPing chan struct{}) error {
 	// The beacon header syncer is async. It will start this synchronization and
 	// will continue doing other tasks. However, if synchronization needs to be
 	// cancelled, the syncer needs to know if we reached the startup point (and
@@ -436,7 +436,7 @@ func (d *Downloader) synchronise(id string, hash common.Hash, td, ttd *big.Int, 
 	if beaconPing != nil {
 		close(beaconPing)
 	}
-	return d.syncWithPeer(p, hash, td, ttd, beaconMode)
+	return d.syncWithPeer(p, hash, td, beaconMode)
 }
 
 func (d *Downloader) getMode() SyncMode {
@@ -445,7 +445,7 @@ func (d *Downloader) getMode() SyncMode {
 
 // syncWithPeer starts a block synchronization based on the hash chain from the
 // specified peer and head hash.
-func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td, ttd *big.Int, beaconMode bool) (err error) {
+func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td *big.Int, beaconMode bool) (err error) {
 	d.mux.Post(StartEvent{})
 	defer func() {
 		// reset on error
@@ -610,7 +610,7 @@ func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td, ttd *
 		headerFetcher, // Headers are always retrieved
 		func() error { return d.fetchBodies(origin+1, beaconMode) },   // Bodies are retrieved during normal and snap sync
 		func() error { return d.fetchReceipts(origin+1, beaconMode) }, // Receipts are retrieved during snap sync
-		func() error { return d.processHeaders(origin+1, td, ttd, beaconMode) },
+		func() error { return d.processHeaders(origin+1, td, beaconMode) },
 	}
 	if mode == SnapSync {
 		d.pivotLock.Lock()
@@ -619,7 +619,7 @@ func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td, ttd *
 
 		fetchers = append(fetchers, func() error { return d.processSnapSyncContent() })
 	} else if mode == FullSync {
-		fetchers = append(fetchers, func() error { return d.processFullSyncContent(ttd, beaconMode) })
+		fetchers = append(fetchers, func() error { return d.processFullSyncContent(beaconMode) })
 	}
 	return d.spawnSync(fetchers)
 }
@@ -741,9 +741,11 @@ func (d *Downloader) fetchHead(p *peerConnection) (head *types.Header, pivot *ty
 // calculateRequestSpan calculates what headers to request from a peer when trying to determine the
 // common ancestor.
 // It returns parameters to be used for peer.RequestHeadersByNumber:
-//  from - starting block number
-//  count - number of headers to request
-//  skip - number of headers to skip
+//
+//	from - starting block number
+//	count - number of headers to request
+//	skip - number of headers to skip
+//
 // and also returns 'max', the last block which is expected to be returned by the remote peers,
 // given the (from,count,skip)
 func calculateRequestSpan(remoteHeight, localHeight uint64) (int64, int, int, uint64) {
@@ -1249,7 +1251,7 @@ func (d *Downloader) fetchReceipts(from uint64, beaconMode bool) error {
 // processHeaders takes batches of retrieved headers from an input channel and
 // keeps processing and scheduling them into the header chain and downloader's
 // queue until the stream ends or a failure occurs.
-func (d *Downloader) processHeaders(origin uint64, td, ttd *big.Int, beaconMode bool) error {
+func (d *Downloader) processHeaders(origin uint64, td *big.Int, beaconMode bool) error {
 	// Keep a count of uncertain headers to roll back
 	var (
 		rollback    uint64 // Zero means no rollback (fine as you can't unroll the genesis)
@@ -1379,28 +1381,28 @@ func (d *Downloader) processHeaders(origin uint64, td, ttd *big.Int, beaconMode 
 						rejected []*types.Header
 						td       *big.Int
 					)
-					if !beaconMode && ttd != nil {
+					if !beaconMode {
 						td = d.blockchain.GetTd(chunkHeaders[0].ParentHash, chunkHeaders[0].Number.Uint64()-1)
 						if td == nil {
 							// This should never really happen, but handle gracefully for now
 							log.Error("Failed to retrieve parent header TD", "number", chunkHeaders[0].Number.Uint64()-1, "hash", chunkHeaders[0].ParentHash)
 							return fmt.Errorf("%w: parent TD missing", errInvalidChain)
 						}
-						for i, header := range chunkHeaders {
+						for _, header := range chunkHeaders {
 							td = new(big.Int).Add(td, header.Difficulty)
-							if td.Cmp(ttd) >= 0 {
-								// Terminal total difficulty reached, allow the last header in
-								if new(big.Int).Sub(td, header.Difficulty).Cmp(ttd) < 0 {
-									chunkHeaders, rejected = chunkHeaders[:i+1], chunkHeaders[i+1:]
-									if len(rejected) > 0 {
-										// Make a nicer user log as to the first TD truly rejected
-										td = new(big.Int).Add(td, rejected[0].Difficulty)
-									}
-								} else {
-									chunkHeaders, rejected = chunkHeaders[:i], chunkHeaders[i:]
-								}
-								break
-							}
+							//if td.Cmp(ttd) >= 0 {
+							//	// Terminal total difficulty reached, allow the last header in
+							//	if new(big.Int).Sub(td, header.Difficulty).Cmp(ttd) < 0 {
+							//		chunkHeaders, rejected = chunkHeaders[:i+1], chunkHeaders[i+1:]
+							//		if len(rejected) > 0 {
+							//			// Make a nicer user log as to the first TD truly rejected
+							//			td = new(big.Int).Add(td, rejected[0].Difficulty)
+							//		}
+							//	} else {
+							//		chunkHeaders, rejected = chunkHeaders[:i], chunkHeaders[i:]
+							//	}
+							//	break
+							//}
 						}
 					}
 					if len(chunkHeaders) > 0 {
@@ -1428,7 +1430,7 @@ func (d *Downloader) processHeaders(origin uint64, td, ttd *big.Int, beaconMode 
 						// Merge threshold reached, stop importing, but don't roll back
 						rollback = 0
 
-						log.Info("Legacy sync reached merge threshold", "number", rejected[0].Number, "hash", rejected[0].Hash(), "td", td, "ttd", ttd)
+						log.Info("Legacy sync reached merge threshold", "number", rejected[0].Number, "hash", rejected[0].Hash(), "td", td)
 						return ErrMergeTransition
 					}
 				}
@@ -1473,7 +1475,7 @@ func (d *Downloader) processHeaders(origin uint64, td, ttd *big.Int, beaconMode 
 }
 
 // processFullSyncContent takes fetch results from the queue and imports them into the chain.
-func (d *Downloader) processFullSyncContent(ttd *big.Int, beaconMode bool) error {
+func (d *Downloader) processFullSyncContent(beaconMode bool) error {
 	for {
 		results := d.queue.Results(true)
 		if len(results) == 0 {
@@ -1489,35 +1491,35 @@ func (d *Downloader) processFullSyncContent(ttd *big.Int, beaconMode bool) error
 			rejected []*fetchResult
 			td       *big.Int
 		)
-		if !beaconMode && ttd != nil {
+		if !beaconMode {
 			td = d.blockchain.GetTd(results[0].Header.ParentHash, results[0].Header.Number.Uint64()-1)
 			if td == nil {
 				// This should never really happen, but handle gracefully for now
 				log.Error("Failed to retrieve parent block TD", "number", results[0].Header.Number.Uint64()-1, "hash", results[0].Header.ParentHash)
 				return fmt.Errorf("%w: parent TD missing", errInvalidChain)
 			}
-			for i, result := range results {
+			for _, result := range results {
 				td = new(big.Int).Add(td, result.Header.Difficulty)
-				if td.Cmp(ttd) >= 0 {
-					// Terminal total difficulty reached, allow the last block in
-					if new(big.Int).Sub(td, result.Header.Difficulty).Cmp(ttd) < 0 {
-						results, rejected = results[:i+1], results[i+1:]
-						if len(rejected) > 0 {
-							// Make a nicer user log as to the first TD truly rejected
-							td = new(big.Int).Add(td, rejected[0].Header.Difficulty)
-						}
-					} else {
-						results, rejected = results[:i], results[i:]
-					}
-					break
-				}
+				//if td.Cmp(ttd) >= 0 {
+				//	// Terminal total difficulty reached, allow the last block in
+				//	if new(big.Int).Sub(td, result.Header.Difficulty).Cmp(ttd) < 0 {
+				//		results, rejected = results[:i+1], results[i+1:]
+				//		if len(rejected) > 0 {
+				//			// Make a nicer user log as to the first TD truly rejected
+				//			td = new(big.Int).Add(td, rejected[0].Header.Difficulty)
+				//		}
+				//	} else {
+				//		results, rejected = results[:i], results[i:]
+				//	}
+				//	break
+				//}
 			}
 		}
 		if err := d.importBlockResults(results); err != nil {
 			return err
 		}
 		if len(rejected) != 0 {
-			log.Info("Legacy sync reached merge threshold", "number", rejected[0].Header.Number, "hash", rejected[0].Header.Hash(), "td", td, "ttd", ttd)
+			log.Info("Legacy sync reached merge threshold", "number", rejected[0].Header.Number, "hash", rejected[0].Header.Hash(), "td", td)
 			return ErrMergeTransition
 		}
 	}
