@@ -19,6 +19,7 @@ package clique
 
 import (
 	"bytes"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"github.com/ethereum/go-ethereum/gmsm"
@@ -153,16 +154,10 @@ func ecrecover(header *types.Header, sigcache *lru.ARCCache) (common.Address, er
 	if len(header.Extra) < extraSeal {
 		return common.Address{}, errMissingSignature
 	}
-	signature := header.Extra[len(header.Extra)-extraSeal:]
-
-	// Recover the public key and the Ethereum address
-	//pubkey, err := crypto.Ecrecover(SealHash(header).Bytes(), signature)
-	//if err != nil {
-	//	return common.Address{}, err
-	//}
-	var signer common.Address
-	copy(signer[:], gmsm.SM3(signature[1:])[12:])
-
+	data := header.Extra[32:65] //first address on extra
+	pub, _ := gmsm.UnmarshalPubkey(data)
+	signer := gmsm.PubkeyToAddress(*pub)
+	fmt.Println("debug ", signer, header.Number, hex.EncodeToString(header.Extra))
 	sigcache.Add(hash, signer)
 	return signer, nil
 }
@@ -471,7 +466,7 @@ func (c *Clique) verifySeal(snap *Snapshot, header *types.Header, parents []*typ
 		return err
 	}
 	if _, ok := snap.Signers[signer]; !ok {
-		return errUnauthorizedSigner
+		return errors.New("unauthorized signer in verifySeal")
 	}
 	for seen, recent := range snap.Recents {
 		if recent == signer {
@@ -615,7 +610,7 @@ func (c *Clique) Seal(chain consensus.ChainHeaderReader, block *types.Block, res
 		return err
 	}
 	if _, authorized := snap.Signers[signer]; !authorized {
-		return errUnauthorizedSigner
+		return errors.New("unauthorized signer in seal")
 	}
 	// If we're amongst the recent signers, wait for the next block
 	for seen, recent := range snap.Recents {

@@ -433,20 +433,20 @@ func DefaultGenesisBlock() *Genesis {
 	return &Genesis{
 		Config:     params.MainnetChainConfig,
 		Nonce:      66,
-		ExtraData:  hexutil.MustDecode("0x11bbe8db4e347b4e8c937c1c8370e4b5ed33adb3db69cbdb7a38e1e50b1b82fa"),
+		ExtraData:  common.Hex2Bytes("0000000000000000000000000000000000000000000000000000000000000000013ce455fd10aff3f6ebf82a10270829b93b5e65aeebac604efcaba66e4c8a60910000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"),
 		GasLimit:   16777216,
 		Difficulty: big.NewInt(1),
 		//Alloc:      decodePrealloc(mainnetAllocData),
 		Alloc: map[common.Address]GenesisAccount{
-			common.BytesToAddress([]byte{1}): {Balance: big.NewInt(1)}, // ECRecover
-			common.BytesToAddress([]byte{2}): {Balance: big.NewInt(1)}, // SHA256
-			common.BytesToAddress([]byte{3}): {Balance: big.NewInt(1)}, // RIPEMD
-			common.BytesToAddress([]byte{4}): {Balance: big.NewInt(1)}, // Identity
-			common.BytesToAddress([]byte{5}): {Balance: big.NewInt(1)}, // ModExp
-			common.BytesToAddress([]byte{6}): {Balance: big.NewInt(1)}, // ECAdd
-			common.BytesToAddress([]byte{7}): {Balance: big.NewInt(1)}, // ECScalarMul
-			common.BytesToAddress([]byte{8}): {Balance: big.NewInt(1)}, // ECPairing
-			common.BytesToAddress([]byte{9}): {Balance: big.NewInt(1)}, // BLAKE2b
+			common.BytesToAddress([]byte{1}): {Balance: big.NewInt(1)},
+			common.BytesToAddress([]byte{2}): {Balance: big.NewInt(1)}, // SM3
+			common.BytesToAddress([]byte{3}): {Balance: big.NewInt(1)},
+			common.BytesToAddress([]byte{4}): {Balance: big.NewInt(1)},
+			common.BytesToAddress([]byte{5}): {Balance: big.NewInt(1)},
+			common.BytesToAddress([]byte{6}): {Balance: big.NewInt(1)},
+			common.BytesToAddress([]byte{7}): {Balance: big.NewInt(1)},
+			common.BytesToAddress([]byte{8}): {Balance: big.NewInt(1)},
+			common.BytesToAddress([]byte{9}): {Balance: big.NewInt(1)},
 			faucet:                           {Balance: new(big.Int).Sub(new(big.Int).Lsh(big.NewInt(1), 256), big.NewInt(9))},
 		},
 	}

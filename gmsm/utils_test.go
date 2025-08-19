@@ -5,8 +5,10 @@ import (
 	"crypto/rand"
 	"crypto/x509/pkix"
 	"encoding/asn1"
+	"encoding/hex"
 	"encoding/pem"
 	"fmt"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/gmsm/sm2"
 	"github.com/ethereum/go-ethereum/gmsm/x509"
 	"golang.org/x/crypto/cryptobyte"
@@ -400,4 +402,25 @@ func TestCopyBytes(t *testing.T) {
 	copy(l[dataLen*2:], data)
 	copy(l[dataLen*3:], data)
 	fmt.Println("l: ", len(l), string(l))
+}
+
+type identity [PublicKeyLength]byte
+
+func (i identity) Address() (common.Address, error) {
+	pub, err := UnmarshalPubkey(i[:])
+	return PubkeyToAddress(*pub), err
+}
+
+func TestKKK(t *testing.T) {
+	priv, _ := GenerateKey()
+	byt := FromSM2Pub(&priv.PublicKey)
+	var k identity
+	copy(k[:], byt)
+	//a, e := k.Address()
+	//if e != nil {
+	//	t.Error(e)
+	//}
+	x, _ := UnmarshalPubkey(k[:])
+
+	fmt.Println(hex.EncodeToString(k[:]), PubkeyToAddress(priv.PublicKey), x)
 }
