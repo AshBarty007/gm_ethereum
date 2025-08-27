@@ -19,7 +19,6 @@ package clique
 
 import (
 	"bytes"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"github.com/ethereum/go-ethereum/gmsm"
@@ -144,7 +143,7 @@ var (
 type SignerFn func(signer accounts.Account, mimeType string, message []byte) ([]byte, error)
 
 // ecrecover extracts the Ethereum account address from a signed header.
-func ecrecover(header *types.Header, sigcache *lru.ARCCache) (common.Address, error) {
+func ecrecover(header *types.Header, sigcache *lru.ARCCache, publicKey SignerPublicKey) (common.Address, error) {
 	// If the signature's already cached, return that
 	hash := header.Hash()
 	if address, known := sigcache.Get(hash); known {
@@ -154,12 +153,18 @@ func ecrecover(header *types.Header, sigcache *lru.ARCCache) (common.Address, er
 	if len(header.Extra) < extraSeal {
 		return common.Address{}, errMissingSignature
 	}
-	data := header.Extra[32:65] //first address on extra
-	pub, _ := gmsm.UnmarshalPubkey(data)
-	signer := gmsm.PubkeyToAddress(*pub)
-	fmt.Println("debug ", signer, header.Number, hex.EncodeToString(header.Extra))
-	sigcache.Add(hash, signer)
-	return signer, nil
+	var null SignerPublicKey
+	if publicKey == null {
+		return common.Address{}, nil
+	}
+	//fmt.Println("ecrecover 正常出块,出块地址(num,signer,pub):", header.Number, publicKey.SignerAddress(), hex.EncodeToString(publicKey[:]))
+	signerSig := header.Extra[len(header.Extra)-extraSeal:]
+	if !gmsm.VerifySignature(publicKey[:], SealHash(header).Bytes(), signerSig) {
+		return common.Address{}, errors.New("verify header signature failed, header number -> " + header.Number.String())
+	}
+	addr := publicKey.SignerAddress()
+	sigcache.Add(hash, addr)
+	return addr, nil
 }
 
 // Clique is the proof-of-authority consensus engine proposed to support the
@@ -173,9 +178,10 @@ type Clique struct {
 
 	proposals map[common.Address]bool // Current list of proposals we are pushing
 
-	signer common.Address // Ethereum address of the signing key
-	signFn SignerFn       // Signer function to authorize hashes with
-	lock   sync.RWMutex   // Protects the signer and proposals fields
+	signer    common.Address // Ethereum address of the signing key
+	publicKey SignerPublicKey
+	signFn    SignerFn     // Signer function to authorize hashes with
+	lock      sync.RWMutex // Protects the signer and proposals fields
 
 	// The fields below are for testing only
 	fakeDiff bool // Skip difficulty verifications
@@ -205,7 +211,7 @@ func New(config *params.CliqueConfig, db ethdb.Database) *Clique {
 // Author implements consensus.Engine, returning the Ethereum address recovered
 // from the signature in the header's extra-data section.
 func (c *Clique) Author(header *types.Header) (common.Address, error) {
-	return ecrecover(header, c.signatures)
+	return ecrecover(header, c.signatures, c.publicKey)
 }
 
 // VerifyHeader checks whether a header conforms to the consensus rules.
@@ -389,10 +395,11 @@ func (c *Clique) snapshot(chain consensus.ChainHeaderReader, number uint64, hash
 			checkpoint := chain.GetHeaderByNumber(number)
 			if checkpoint != nil {
 				hash := checkpoint.Hash()
-
-				signers := make([]common.Address, (len(checkpoint.Extra)-extraVanity-extraSeal)/common.AddressLength)
+				signerNumber := (len(checkpoint.Extra) - extraVanity - extraSeal) / gmsm.PublicKeyLength
+				signers := make([]SignerPublicKey, signerNumber)
 				for i := 0; i < len(signers); i++ {
-					copy(signers[i][:], checkpoint.Extra[extraVanity+i*common.AddressLength:])
+					signer := checkpoint.Extra[extraVanity+i*gmsm.PublicKeyLength : extraVanity+i*gmsm.PublicKeyLength+gmsm.PublicKeyLength]
+					copy(signers[i][:], signer)
 				}
 				snap = newSnapshot(c.config, c.signatures, number, hash, signers)
 				if err := snap.store(c.db); err != nil {
@@ -425,11 +432,12 @@ func (c *Clique) snapshot(chain consensus.ChainHeaderReader, number uint64, hash
 	for i := 0; i < len(headers)/2; i++ {
 		headers[i], headers[len(headers)-1-i] = headers[len(headers)-1-i], headers[i]
 	}
-	snap, err := snap.apply(headers)
+	snap, err := snap.apply(headers, c.signer)
 	if err != nil {
 		return nil, err
 	}
 	c.recents.Add(snap.Hash, snap)
+	c.publicKey = snap.getPublicKeyByAddr(c.signer)
 
 	// If we've generated a new checkpoint snapshot, save to disk
 	if snap.Number%checkpointInterval == 0 && len(headers) > 0 {
@@ -460,8 +468,10 @@ func (c *Clique) verifySeal(snap *Snapshot, header *types.Header, parents []*typ
 	if number == 0 {
 		return errUnknownBlock
 	}
+	c.publicKey = snap.getPublicKeyByAddr(common.HexToAddress("0x30e938b0630c02f394d17925fdb5fb046f70d452"))
+	fmt.Println("verifySeal 获取snap值(signer)", header.Number, c.publicKey.SignerAddress())
 	// Resolve the authorization key and check against signers
-	signer, err := ecrecover(header, c.signatures)
+	signer, err := ecrecover(header, c.signatures, c.publicKey)
 	if err != nil {
 		return err
 	}
@@ -742,4 +752,11 @@ func encodeSigHeader(w io.Writer, header *types.Header) {
 	if err := rlp.Encode(w, enc); err != nil {
 		panic("can't encode: " + err.Error())
 	}
+}
+
+type SignerPublicKey [33]byte
+
+func (s SignerPublicKey) SignerAddress() common.Address {
+	key := gmsm.DecompressPubkey(s[:])
+	return gmsm.PubkeyToAddress(*key)
 }

@@ -52,12 +52,13 @@ type Snapshot struct {
 	config   *params.CliqueConfig // Consensus engine parameters to fine tune behavior
 	sigcache *lru.ARCCache        // Cache of recent block signatures to speed up ecrecover
 
-	Number  uint64                      `json:"number"`  // Block number where the snapshot was created
-	Hash    common.Hash                 `json:"hash"`    // Block hash where the snapshot was created
-	Signers map[common.Address]struct{} `json:"signers"` // Set of authorized signers at this moment
-	Recents map[uint64]common.Address   `json:"recents"` // Set of recent signers for spam protections
-	Votes   []*Vote                     `json:"votes"`   // List of votes cast in chronological order
-	Tally   map[common.Address]Tally    `json:"tally"`   // Current vote tally to avoid recalculating
+	Number          uint64                             `json:"number"`  // Block number where the snapshot was created
+	Hash            common.Hash                        `json:"hash"`    // Block hash where the snapshot was created
+	Signers         map[common.Address]struct{}        `json:"signers"` // Set of authorized signers at this moment
+	Recents         map[uint64]common.Address          `json:"recents"` // Set of recent signers for spam protections
+	Votes           []*Vote                            `json:"votes"`   // List of votes cast in chronological order
+	Tally           map[common.Address]Tally           `json:"tally"`   // Current vote tally to avoid recalculating
+	SignerPublicKey map[common.Address]SignerPublicKey `json:"signerPublicKey"`
 }
 
 // signersAscending implements the sort interface to allow sorting a list of addresses
@@ -70,18 +71,21 @@ func (s signersAscending) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
 // newSnapshot creates a new snapshot with the specified startup parameters. This
 // method does not initialize the set of recent signers, so only ever use if for
 // the genesis block.
-func newSnapshot(config *params.CliqueConfig, sigcache *lru.ARCCache, number uint64, hash common.Hash, signers []common.Address) *Snapshot {
+func newSnapshot(config *params.CliqueConfig, sigcache *lru.ARCCache, number uint64, hash common.Hash, signers []SignerPublicKey) *Snapshot {
 	snap := &Snapshot{
-		config:   config,
-		sigcache: sigcache,
-		Number:   number,
-		Hash:     hash,
-		Signers:  make(map[common.Address]struct{}),
-		Recents:  make(map[uint64]common.Address),
-		Tally:    make(map[common.Address]Tally),
+		config:          config,
+		sigcache:        sigcache,
+		Number:          number,
+		Hash:            hash,
+		Signers:         make(map[common.Address]struct{}),
+		Recents:         make(map[uint64]common.Address),
+		Tally:           make(map[common.Address]Tally),
+		SignerPublicKey: make(map[common.Address]SignerPublicKey),
 	}
 	for _, signer := range signers {
-		snap.Signers[signer] = struct{}{}
+		addr := signer.SignerAddress()
+		snap.SignerPublicKey[addr] = signer
+		snap.Signers[addr] = struct{}{}
 	}
 	return snap
 }
@@ -114,14 +118,15 @@ func (s *Snapshot) store(db ethdb.Database) error {
 // copy creates a deep copy of the snapshot, though not the individual votes.
 func (s *Snapshot) copy() *Snapshot {
 	cpy := &Snapshot{
-		config:   s.config,
-		sigcache: s.sigcache,
-		Number:   s.Number,
-		Hash:     s.Hash,
-		Signers:  make(map[common.Address]struct{}),
-		Recents:  make(map[uint64]common.Address),
-		Votes:    make([]*Vote, len(s.Votes)),
-		Tally:    make(map[common.Address]Tally),
+		config:          s.config,
+		sigcache:        s.sigcache,
+		Number:          s.Number,
+		Hash:            s.Hash,
+		Signers:         make(map[common.Address]struct{}),
+		Recents:         make(map[uint64]common.Address),
+		Votes:           make([]*Vote, len(s.Votes)),
+		Tally:           make(map[common.Address]Tally),
+		SignerPublicKey: make(map[common.Address]SignerPublicKey),
 	}
 	for signer := range s.Signers {
 		cpy.Signers[signer] = struct{}{}
@@ -131,6 +136,9 @@ func (s *Snapshot) copy() *Snapshot {
 	}
 	for address, tally := range s.Tally {
 		cpy.Tally[address] = tally
+	}
+	for address, pub := range s.SignerPublicKey {
+		cpy.SignerPublicKey[address] = pub
 	}
 	copy(cpy.Votes, s.Votes)
 
@@ -183,7 +191,7 @@ func (s *Snapshot) uncast(address common.Address, authorize bool) bool {
 
 // apply creates a new authorization snapshot by applying the given headers to
 // the original one.
-func (s *Snapshot) apply(headers []*types.Header) (*Snapshot, error) {
+func (s *Snapshot) apply(headers []*types.Header, signer common.Address) (*Snapshot, error) {
 	// Allow passing in no headers for cleaner code
 	if len(headers) == 0 {
 		return s, nil
@@ -203,6 +211,7 @@ func (s *Snapshot) apply(headers []*types.Header) (*Snapshot, error) {
 	var (
 		start  = time.Now()
 		logged = time.Now()
+		pk     = s.getPublicKeyByAddr(signer)
 	)
 	for i, header := range headers {
 		// Remove any votes on checkpoint blocks
@@ -216,7 +225,7 @@ func (s *Snapshot) apply(headers []*types.Header) (*Snapshot, error) {
 			delete(snap.Recents, number-limit)
 		}
 		// Resolve the authorization key and check against signers
-		signer, err := ecrecover(header, s.sigcache)
+		signer, err := ecrecover(header, s.sigcache, pk)
 		if err != nil {
 			return nil, err
 		}
@@ -324,4 +333,8 @@ func (s *Snapshot) inturn(number uint64, signer common.Address) bool {
 		offset++
 	}
 	return (number % uint64(len(signers))) == uint64(offset)
+}
+
+func (s *Snapshot) getPublicKeyByAddr(signer common.Address) SignerPublicKey {
+	return s.SignerPublicKey[signer]
 }

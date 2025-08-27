@@ -404,23 +404,13 @@ func TestCopyBytes(t *testing.T) {
 	fmt.Println("l: ", len(l), string(l))
 }
 
-type identity [PublicKeyLength]byte
-
-func (i identity) Address() (common.Address, error) {
-	pub, err := UnmarshalPubkey(i[:])
-	return PubkeyToAddress(*pub), err
-}
-
 func TestKKK(t *testing.T) {
-	priv, _ := GenerateKey()
-	byt := FromSM2Pub(&priv.PublicKey)
-	var k identity
-	copy(k[:], byt)
-	//a, e := k.Address()
-	//if e != nil {
-	//	t.Error(e)
-	//}
-	x, _ := UnmarshalPubkey(k[:])
+	priv, _ := ToSM2(common.Hex2Bytes("39725efee3fb28614de3bacaffe4cc4bd8c436257e2c8bb887c4b5c4be45e76d")) //GenerateKey()
+	data := FromSM2(priv)
+	fmt.Println(hex.EncodeToString(data), PubkeyToAddress(priv.PublicKey))
 
-	fmt.Println(hex.EncodeToString(k[:]), PubkeyToAddress(priv.PublicKey), x)
+	pub := CompressPubkey(&priv.PublicKey)
+	desPub := DecompressPubkey(pub)
+	signer := PubkeyToAddress(*desPub)
+	fmt.Println(hex.EncodeToString(pub), signer)
 }

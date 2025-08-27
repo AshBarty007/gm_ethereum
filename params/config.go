@@ -76,11 +76,11 @@ var (
 		LondonBlock:         big.NewInt(0),
 		ArrowGlacierBlock:   big.NewInt(0),
 		GrayGlacierBlock:    big.NewInt(0),
-		Ethash:              new(EthashConfig),
-		//Clique: &CliqueConfig{
-		//	Period: 5,
-		//	Epoch:  100,
-		//},
+		//Ethash:              new(EthashConfig),
+		Clique: &CliqueConfig{
+			Period: 2,
+			Epoch:  60,
+		},
 	}
 
 	// MainnetTrustedCheckpoint contains the light client trusted checkpoint for the main network.
