@@ -400,9 +400,11 @@ func TestCopyBytes(t *testing.T) {
 
 	key := DecompressPubkey(pk[:33])
 	addr := PubkeyToAddress(*key)
-	fmt.Println(len(addr), addr)
+	fmt.Println(len(addr), addr) //0xE1148fc0F5E5a8523dedAA0b29e9AA366d1ae85d
 
-	fmt.Println(hex.EncodeToString(pk[:]))
+	pri := FromSM2(priv)
+	fmt.Println(hex.EncodeToString(pri))   //99b6a142c060edca1855aac5dc4fcfa37453cc337ed68e379772c96193193e0f
+	fmt.Println(hex.EncodeToString(pk[:])) //00ca0677e8cebaf47d89be3f9254b1541e17617e9c888cfc413893de4cd52ea900
 	pk[33] = byte(5)
 	fmt.Println(hex.EncodeToString(pk[:]))
 }

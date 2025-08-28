@@ -191,7 +191,7 @@ func (s *Snapshot) uncast(address common.Address, authorize bool) bool {
 
 // apply creates a new authorization snapshot by applying the given headers to
 // the original one.
-func (s *Snapshot) apply(headers []*types.Header, signer common.Address) (*Snapshot, error) {
+func (s *Snapshot) apply(headers []*types.Header) (*Snapshot, error) {
 	// Allow passing in no headers for cleaner code
 	if len(headers) == 0 {
 		return s, nil
@@ -211,7 +211,6 @@ func (s *Snapshot) apply(headers []*types.Header, signer common.Address) (*Snaps
 	var (
 		start  = time.Now()
 		logged = time.Now()
-		pk     = s.getPublicKeyByAddr(signer)
 	)
 	for i, header := range headers {
 		// Remove any votes on checkpoint blocks
@@ -225,7 +224,7 @@ func (s *Snapshot) apply(headers []*types.Header, signer common.Address) (*Snaps
 			delete(snap.Recents, number-limit)
 		}
 		// Resolve the authorization key and check against signers
-		signer, err := ecrecover(header, s.sigcache, pk)
+		signer, err := ecrecover(header, s.sigcache)
 		if err != nil {
 			return nil, err
 		}
@@ -274,6 +273,7 @@ func (s *Snapshot) apply(headers []*types.Header, signer common.Address) (*Snaps
 				snap.Signers[header.Coinbase] = struct{}{}
 			} else {
 				delete(snap.Signers, header.Coinbase)
+				delete(snap.SignerPublicKey, header.Coinbase)
 
 				// Signer list shrunk, delete any leftover recent caches
 				if limit := uint64(len(snap.Signers)/2 + 1); number >= limit {

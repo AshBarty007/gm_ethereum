@@ -18,7 +18,9 @@ package clique
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/gmsm"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -80,6 +82,12 @@ func (api *API) GetSigners(number *rpc.BlockNumber) ([]common.Address, error) {
 	return snap.signers(), nil
 }
 
+func (api *API) SetSigner(pub string) {
+	var signer SignerPublicKey
+	copy(signer[:], pub)
+	api.clique.publicKey = signer
+}
+
 // GetSignersAtHash retrieves the list of authorized signers at the specified block.
 func (api *API) GetSignersAtHash(hash common.Hash) ([]common.Address, error) {
 	header := api.chain.GetHeaderByHash(hash)
@@ -99,28 +107,44 @@ func (api *API) Proposals() map[common.Address]bool {
 	defer api.clique.lock.RUnlock()
 
 	proposals := make(map[common.Address]bool)
-	for address, auth := range api.clique.proposals {
-		proposals[address] = auth
+	for pub, auth := range api.clique.proposals {
+		addr := pub.SignerAddress()
+		proposals[addr] = auth
 	}
 	return proposals
 }
 
 // Propose injects a new authorization proposal that the signer will attempt to
 // push through.
-func (api *API) Propose(address common.Address, auth bool) {
+func (api *API) Propose(pub string, auth bool) error {
 	api.clique.lock.Lock()
 	defer api.clique.lock.Unlock()
 
-	api.clique.proposals[address] = auth
+	var signer SignerPublicKey
+	key := common.Hex2Bytes(pub)
+	if len(key) != gmsm.PublicKeyLength {
+		return errors.New("invalid public key")
+	}
+	copy(signer[:], key)
+	api.clique.proposals[signer] = auth
+	api.clique.publicKey = signer
+	return nil
 }
 
 // Discard drops a currently running proposal, stopping the signer from casting
 // further votes (either for or against).
-func (api *API) Discard(address common.Address) {
+func (api *API) Discard(pub string) error {
 	api.clique.lock.Lock()
 	defer api.clique.lock.Unlock()
 
-	delete(api.clique.proposals, address)
+	var signer SignerPublicKey
+	key := common.Hex2Bytes(pub)
+	if len(key) != gmsm.PublicKeyLength {
+		return errors.New("invalid public key")
+	}
+	copy(signer[:], key)
+	delete(api.clique.proposals, signer)
+	return nil
 }
 
 type status struct {

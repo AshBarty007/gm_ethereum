@@ -59,7 +59,7 @@ var (
 
 	extraVanity = 32                   // Fixed number of extra-data prefix bytes reserved for signer vanity
 	extraSeal   = gmsm.SignatureLength // Fixed number of extra-data suffix bytes reserved for signer seal
-	extraMiner  = 20
+	extraPub    = 33
 
 	nonceAuthVote = hexutil.MustDecode("0xffffffffffffffff") // Magic nonce number to vote on adding a new signer
 	nonceDropVote = hexutil.MustDecode("0x0000000000000000") // Magic nonce number to vote on removing a signer.
@@ -144,7 +144,7 @@ var (
 type SignerFn func(signer accounts.Account, mimeType string, message []byte) ([]byte, error)
 
 // ecrecover extracts the Ethereum account address from a signed header.
-func ecrecover(header *types.Header, sigcache *lru.ARCCache, publicKey SignerPublicKey) (common.Address, error) {
+func ecrecover(header *types.Header, sigcache *lru.ARCCache) (common.Address, error) {
 	// If the signature's already cached, return that
 	hash := header.Hash()
 	if address, known := sigcache.Get(hash); known {
@@ -154,17 +154,14 @@ func ecrecover(header *types.Header, sigcache *lru.ARCCache, publicKey SignerPub
 	if len(header.Extra) < extraSeal {
 		return common.Address{}, errMissingSignature
 	}
-	var null SignerPublicKey
-	if publicKey == null {
-		return common.Address{}, nil
-	}
-	//fmt.Println("ecrecover 正常出块,出块地址(num,signer,pub):", header.Number, publicKey.SignerAddress(), hex.EncodeToString(publicKey[:]))
-	index := len(header.Extra) - extraSeal - extraMiner
+	index := len(header.Extra) - extraSeal - extraPub
 	signerSig := header.Extra[index : index+extraSeal]
-	if !gmsm.VerifySignature(publicKey[:], SealHash(header).Bytes(), signerSig) {
+	signerPub := header.Extra[index+extraSeal:]
+	if !gmsm.VerifySignature(signerPub, SealHash(header).Bytes(), signerSig) {
 		return common.Address{}, errors.New("verify header signature failed, header number -> " + header.Number.String())
 	}
-	addr := publicKey.SignerAddress()
+	pub := gmsm.DecompressPubkey(signerPub)
+	addr := gmsm.PubkeyToAddress(*pub)
 	sigcache.Add(hash, addr)
 	return addr, nil
 }
@@ -178,7 +175,7 @@ type Clique struct {
 	recents    *lru.ARCCache // Snapshots for recent block to speed up reorgs
 	signatures *lru.ARCCache // Signatures of recent blocks to speed up mining
 
-	proposals map[common.Address]bool // Current list of proposals we are pushing
+	proposals map[SignerPublicKey]bool // Current list of proposals we are pushing
 
 	signer    common.Address // Ethereum address of the signing key
 	publicKey SignerPublicKey
@@ -206,14 +203,14 @@ func New(config *params.CliqueConfig, db ethdb.Database) *Clique {
 		db:         db,
 		recents:    recents,
 		signatures: signatures,
-		proposals:  make(map[common.Address]bool),
+		proposals:  make(map[SignerPublicKey]bool),
 	}
 }
 
 // Author implements consensus.Engine, returning the Ethereum address recovered
 // from the signature in the header's extra-data section.
 func (c *Clique) Author(header *types.Header) (common.Address, error) {
-	return ecrecover(header, c.signatures, c.publicKey)
+	return ecrecover(header, c.signatures)
 }
 
 // VerifyHeader checks whether a header conforms to the consensus rules.
@@ -272,11 +269,11 @@ func (c *Clique) verifyHeader(chain consensus.ChainHeaderReader, header *types.H
 	if len(header.Extra) < extraVanity {
 		return errMissingVanity
 	}
-	if len(header.Extra) < extraVanity+extraSeal+extraMiner {
+	if len(header.Extra) < extraVanity+extraSeal+extraPub {
 		return errMissingSignature
 	}
 	// Ensure that the extra-data contains a signer list on checkpoint, but none otherwise
-	signersBytes := len(header.Extra) - extraVanity - extraSeal - extraMiner
+	signersBytes := len(header.Extra) - extraVanity - extraSeal - extraPub
 	if !checkpoint && signersBytes != 0 {
 		return errExtraSigners
 	}
@@ -359,7 +356,7 @@ func (c *Clique) verifyCascadingFields(chain consensus.ChainHeaderReader, header
 		for i, signer := range snap.signers() {
 			copy(signers[i*common.AddressLength:], signer[:])
 		}
-		extraSuffix := len(header.Extra) - extraSeal - extraMiner
+		extraSuffix := len(header.Extra) - extraSeal - extraPub
 		if !bytes.Equal(header.Extra[extraVanity:extraSuffix], signers) {
 			return errMismatchingCheckpointSigners
 		}
@@ -397,7 +394,7 @@ func (c *Clique) snapshot(chain consensus.ChainHeaderReader, number uint64, hash
 			checkpoint := chain.GetHeaderByNumber(number)
 			if checkpoint != nil {
 				hash := checkpoint.Hash()
-				signerNumber := (len(checkpoint.Extra) - extraVanity - extraSeal) / gmsm.PublicKeyLength
+				signerNumber := (len(checkpoint.Extra) - extraVanity - extraSeal - extraPub) / gmsm.PublicKeyLength
 				signers := make([]SignerPublicKey, signerNumber)
 				for i := 0; i < len(signers); i++ {
 					signer := checkpoint.Extra[extraVanity+i*gmsm.PublicKeyLength : extraVanity+i*gmsm.PublicKeyLength+gmsm.PublicKeyLength]
@@ -434,12 +431,11 @@ func (c *Clique) snapshot(chain consensus.ChainHeaderReader, number uint64, hash
 	for i := 0; i < len(headers)/2; i++ {
 		headers[i], headers[len(headers)-1-i] = headers[len(headers)-1-i], headers[i]
 	}
-	snap, err := snap.apply(headers, c.signer)
+	snap, err := snap.apply(headers)
 	if err != nil {
 		return nil, err
 	}
 	c.recents.Add(snap.Hash, snap)
-	c.publicKey = snap.getPublicKeyByAddr(c.signer)
 
 	// If we've generated a new checkpoint snapshot, save to disk
 	if snap.Number%checkpointInterval == 0 && len(headers) > 0 {
@@ -470,11 +466,8 @@ func (c *Clique) verifySeal(snap *Snapshot, header *types.Header, parents []*typ
 	if number == 0 {
 		return errUnknownBlock
 	}
-	var miner common.Address
-	copy(miner[:], header.Extra[len(header.Extra)-extraMiner:])
-	publicKey := snap.getPublicKeyByAddr(miner)
 	// Resolve the authorization key and check against signers
-	signer, err := ecrecover(header, c.signatures, publicKey)
+	signer, err := ecrecover(header, c.signatures)
 	if err != nil {
 		return err
 	}
@@ -519,15 +512,18 @@ func (c *Clique) Prepare(chain consensus.ChainHeaderReader, header *types.Header
 	if number%c.config.Epoch != 0 {
 		// Gather all the proposals that make sense voting on
 		addresses := make([]common.Address, 0, len(c.proposals))
-		for address, authorize := range c.proposals {
+		for pub, authorize := range c.proposals {
+			address := pub.SignerAddress()
 			if snap.validVote(address, authorize) {
 				addresses = append(addresses, address)
+				snap.SignerPublicKey[address] = pub
 			}
 		}
 		// If there's pending proposals, cast a vote on them
 		if len(addresses) > 0 {
 			header.Coinbase = addresses[rand.Intn(len(addresses))]
-			if c.proposals[header.Coinbase] {
+			pub := snap.getPublicKeyByAddr(header.Coinbase)
+			if c.proposals[pub] {
 				copy(header.Nonce[:], nonceAuthVote)
 			} else {
 				copy(header.Nonce[:], nonceDropVote)
@@ -550,11 +546,12 @@ func (c *Clique) Prepare(chain consensus.ChainHeaderReader, header *types.Header
 
 	if number%c.config.Epoch == 0 {
 		for _, signer := range snap.signers() {
-			header.Extra = append(header.Extra, signer[:]...)
+			pub := snap.getPublicKeyByAddr(signer)
+			header.Extra = append(header.Extra, pub[:]...)
 		}
 	}
 	header.Extra = append(header.Extra, make([]byte, extraSeal)...)
-	header.Extra = append(header.Extra, make([]byte, extraMiner)...)
+	header.Extra = append(header.Extra, make([]byte, extraPub)...)
 
 	// Mix digest is reserved for now, set to empty
 	header.MixDigest = common.Hash{}
@@ -650,8 +647,17 @@ func (c *Clique) Seal(chain consensus.ChainHeaderReader, block *types.Block, res
 		return err
 	}
 
-	copy(header.Extra[len(header.Extra)-extraSeal-extraMiner:len(header.Extra)-extraMiner], sighash)
-	copy(header.Extra[len(header.Extra)-extraMiner:], c.signer.Bytes())
+	pub := snap.getPublicKeyByAddr(c.signer)
+	var null SignerPublicKey
+	if pub == null {
+		if c.publicKey == pub {
+			return errors.New("please set signer pub")
+		} else {
+			pub = c.publicKey
+		}
+	}
+	copy(header.Extra[len(header.Extra)-extraSeal-extraPub:len(header.Extra)-extraPub], sighash)
+	copy(header.Extra[len(header.Extra)-extraPub:], pub[:])
 	// Wait until sealing is terminated or delay timeout.
 	log.Trace("Waiting for slot to sign and propagate", "delay", common.PrettyDuration(delay))
 	go func() {
@@ -748,7 +754,7 @@ func encodeSigHeader(w io.Writer, header *types.Header) {
 		header.GasLimit,
 		header.GasUsed,
 		header.Time,
-		header.Extra[:len(header.Extra)-extraSeal-extraMiner], // Yes, this will panic if extra is too short
+		header.Extra[:len(header.Extra)-extraSeal-extraPub], // Yes, this will panic if extra is too short
 		header.MixDigest,
 		header.Nonce,
 	}
