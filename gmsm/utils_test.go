@@ -393,15 +393,18 @@ func TestDecompressPubkey(t *testing.T) {
 }
 
 func TestCopyBytes(t *testing.T) {
-	data := []byte("message")
-	dataLen := len(data)
-	fmt.Println("len(data): ", len(data), string(data))
-	l := make([]byte, dataLen*4)
-	copy(l, data)
-	copy(l[dataLen:], data)
-	copy(l[dataLen*2:], data)
-	copy(l[dataLen*3:], data)
-	fmt.Println("l: ", len(l), string(l))
+	priv, _ := GenerateKey()
+	pub := CompressPubkey(&priv.PublicKey)
+	var pk [34]byte
+	copy(pk[:], pub)
+
+	key := DecompressPubkey(pk[:33])
+	addr := PubkeyToAddress(*key)
+	fmt.Println(len(addr), addr)
+
+	fmt.Println(hex.EncodeToString(pk[:]))
+	pk[33] = byte(5)
+	fmt.Println(hex.EncodeToString(pk[:]))
 }
 
 func TestKKK(t *testing.T) {

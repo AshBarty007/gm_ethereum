@@ -433,7 +433,7 @@ func DefaultGenesisBlock() *Genesis {
 	return &Genesis{
 		Config:     params.MainnetChainConfig,
 		Nonce:      66,
-		ExtraData:  common.Hex2Bytes("0000000000000000000000000000000000000000000000000000000000000000013ce455fd10aff3f6ebf82a10270829b93b5e65aeebac604efcaba66e4c8a60910000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"),
+		ExtraData:  common.Hex2Bytes("0000000000000000000000000000000000000000000000000000000000000000013ce455fd10aff3f6ebf82a10270829b93b5e65aeebac604efcaba66e4c8a6091000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000030e938b0630c02f394d17925fdb5fb046f70d452"),
 		GasLimit:   16777216,
 		Difficulty: big.NewInt(1),
 		//Alloc:      decodePrealloc(mainnetAllocData),
@@ -447,7 +447,7 @@ func DefaultGenesisBlock() *Genesis {
 			common.BytesToAddress([]byte{7}): {Balance: big.NewInt(1)},
 			common.BytesToAddress([]byte{8}): {Balance: big.NewInt(1)},
 			common.BytesToAddress([]byte{9}): {Balance: big.NewInt(1)},
-			faucet:                           {Balance: new(big.Int).Sub(new(big.Int).Lsh(big.NewInt(1), 256), big.NewInt(9))},
+			faucet:                           {Balance: big.NewInt(0)}, //new(big.Int).Sub(new(big.Int).Lsh(big.NewInt(1), 256), big.NewInt(9))},
 		},
 	}
 }

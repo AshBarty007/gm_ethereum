@@ -59,6 +59,7 @@ var (
 
 	extraVanity = 32                   // Fixed number of extra-data prefix bytes reserved for signer vanity
 	extraSeal   = gmsm.SignatureLength // Fixed number of extra-data suffix bytes reserved for signer seal
+	extraMiner  = 20
 
 	nonceAuthVote = hexutil.MustDecode("0xffffffffffffffff") // Magic nonce number to vote on adding a new signer
 	nonceDropVote = hexutil.MustDecode("0x0000000000000000") // Magic nonce number to vote on removing a signer.
@@ -158,7 +159,8 @@ func ecrecover(header *types.Header, sigcache *lru.ARCCache, publicKey SignerPub
 		return common.Address{}, nil
 	}
 	//fmt.Println("ecrecover 正常出块,出块地址(num,signer,pub):", header.Number, publicKey.SignerAddress(), hex.EncodeToString(publicKey[:]))
-	signerSig := header.Extra[len(header.Extra)-extraSeal:]
+	index := len(header.Extra) - extraSeal - extraMiner
+	signerSig := header.Extra[index : index+extraSeal]
 	if !gmsm.VerifySignature(publicKey[:], SealHash(header).Bytes(), signerSig) {
 		return common.Address{}, errors.New("verify header signature failed, header number -> " + header.Number.String())
 	}
@@ -270,11 +272,11 @@ func (c *Clique) verifyHeader(chain consensus.ChainHeaderReader, header *types.H
 	if len(header.Extra) < extraVanity {
 		return errMissingVanity
 	}
-	if len(header.Extra) < extraVanity+extraSeal {
+	if len(header.Extra) < extraVanity+extraSeal+extraMiner {
 		return errMissingSignature
 	}
 	// Ensure that the extra-data contains a signer list on checkpoint, but none otherwise
-	signersBytes := len(header.Extra) - extraVanity - extraSeal
+	signersBytes := len(header.Extra) - extraVanity - extraSeal - extraMiner
 	if !checkpoint && signersBytes != 0 {
 		return errExtraSigners
 	}
@@ -357,7 +359,7 @@ func (c *Clique) verifyCascadingFields(chain consensus.ChainHeaderReader, header
 		for i, signer := range snap.signers() {
 			copy(signers[i*common.AddressLength:], signer[:])
 		}
-		extraSuffix := len(header.Extra) - extraSeal
+		extraSuffix := len(header.Extra) - extraSeal - extraMiner
 		if !bytes.Equal(header.Extra[extraVanity:extraSuffix], signers) {
 			return errMismatchingCheckpointSigners
 		}
@@ -468,10 +470,11 @@ func (c *Clique) verifySeal(snap *Snapshot, header *types.Header, parents []*typ
 	if number == 0 {
 		return errUnknownBlock
 	}
-	c.publicKey = snap.getPublicKeyByAddr(common.HexToAddress("0x30e938b0630c02f394d17925fdb5fb046f70d452"))
-	fmt.Println("verifySeal 获取snap值(signer)", header.Number, c.publicKey.SignerAddress())
+	var miner common.Address
+	copy(miner[:], header.Extra[len(header.Extra)-extraMiner:])
+	publicKey := snap.getPublicKeyByAddr(miner)
 	// Resolve the authorization key and check against signers
-	signer, err := ecrecover(header, c.signatures, c.publicKey)
+	signer, err := ecrecover(header, c.signatures, publicKey)
 	if err != nil {
 		return err
 	}
@@ -551,6 +554,7 @@ func (c *Clique) Prepare(chain consensus.ChainHeaderReader, header *types.Header
 		}
 	}
 	header.Extra = append(header.Extra, make([]byte, extraSeal)...)
+	header.Extra = append(header.Extra, make([]byte, extraMiner)...)
 
 	// Mix digest is reserved for now, set to empty
 	header.MixDigest = common.Hash{}
@@ -645,7 +649,9 @@ func (c *Clique) Seal(chain consensus.ChainHeaderReader, block *types.Block, res
 	if err != nil {
 		return err
 	}
-	copy(header.Extra[len(header.Extra)-extraSeal:], sighash)
+
+	copy(header.Extra[len(header.Extra)-extraSeal-extraMiner:len(header.Extra)-extraMiner], sighash)
+	copy(header.Extra[len(header.Extra)-extraMiner:], c.signer.Bytes())
 	// Wait until sealing is terminated or delay timeout.
 	log.Trace("Waiting for slot to sign and propagate", "delay", common.PrettyDuration(delay))
 	go func() {
@@ -742,7 +748,7 @@ func encodeSigHeader(w io.Writer, header *types.Header) {
 		header.GasLimit,
 		header.GasUsed,
 		header.Time,
-		header.Extra[:len(header.Extra)-gmsm.SignatureLength], // Yes, this will panic if extra is too short
+		header.Extra[:len(header.Extra)-extraSeal-extraMiner], // Yes, this will panic if extra is too short
 		header.MixDigest,
 		header.Nonce,
 	}
