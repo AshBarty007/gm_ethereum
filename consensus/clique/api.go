@@ -82,10 +82,11 @@ func (api *API) GetSigners(number *rpc.BlockNumber) ([]common.Address, error) {
 	return snap.signers(), nil
 }
 
-func (api *API) SetSigner(pub string) {
+func (api *API) SetSignerPub(pub string) string {
 	var signer SignerPublicKey
-	copy(signer[:], pub)
+	copy(signer[:], common.FromHex(pub))
 	api.clique.publicKey = signer
+	return common.Bytes2Hex(api.clique.publicKey[:])
 }
 
 // GetSignersAtHash retrieves the list of authorized signers at the specified block.

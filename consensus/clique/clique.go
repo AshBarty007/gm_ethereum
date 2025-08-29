@@ -472,7 +472,7 @@ func (c *Clique) verifySeal(snap *Snapshot, header *types.Header, parents []*typ
 		return err
 	}
 	if _, ok := snap.Signers[signer]; !ok {
-		return errors.New("unauthorized signer in verifySeal")
+		return errUnauthorizedSigner
 	}
 	for seen, recent := range snap.Recents {
 		if recent == signer {
@@ -621,7 +621,7 @@ func (c *Clique) Seal(chain consensus.ChainHeaderReader, block *types.Block, res
 		return err
 	}
 	if _, authorized := snap.Signers[signer]; !authorized {
-		return errors.New("unauthorized signer in seal")
+		return errUnauthorizedSigner
 	}
 	// If we're amongst the recent signers, wait for the next block
 	for seen, recent := range snap.Recents {
@@ -650,10 +650,15 @@ func (c *Clique) Seal(chain consensus.ChainHeaderReader, block *types.Block, res
 	pub := snap.getPublicKeyByAddr(c.signer)
 	var null SignerPublicKey
 	if pub == null {
-		if c.publicKey == pub {
+		if c.publicKey == null {
 			return errors.New("please set signer pub")
-		} else {
+		}
+		key := gmsm.DecompressPubkey(c.publicKey[:])
+		if c.signer == gmsm.PubkeyToAddress(*key) {
 			pub = c.publicKey
+			snap.SignerPublicKey[c.signer] = c.publicKey
+		} else {
+			return errors.New("singer address not match at signer public key")
 		}
 	}
 	copy(header.Extra[len(header.Extra)-extraSeal-extraPub:len(header.Extra)-extraPub], sighash)

@@ -79,6 +79,11 @@ web3._extend({
 			params: 1,
 			inputFormatter: [null]
 		}),
+		new web3._extend.Method({
+			name: 'setSignerPub',
+			call: 'clique_setSignerPub',
+			params: 1,
+		}),
 	],
 	properties: [
 		new web3._extend.Property({

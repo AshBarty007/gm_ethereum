@@ -19,7 +19,6 @@ package clique
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"sort"
 	"time"
 
@@ -229,7 +228,7 @@ func (s *Snapshot) apply(headers []*types.Header) (*Snapshot, error) {
 			return nil, err
 		}
 		if _, ok := snap.Signers[signer]; !ok {
-			return nil, errors.New("unauthorized signer in apply")
+			return nil, errUnauthorizedSigner
 		}
 		for _, recent := range snap.Recents {
 			if recent == signer {
