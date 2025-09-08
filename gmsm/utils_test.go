@@ -392,7 +392,7 @@ func TestDecompressPubkey(t *testing.T) {
 	}
 }
 
-func TestCopyBytes(t *testing.T) {
+func TestRandomKey(t *testing.T) {
 	priv, _ := GenerateKey()
 	pub := CompressPubkey(&priv.PublicKey)
 	var pk [34]byte
@@ -410,12 +410,27 @@ func TestCopyBytes(t *testing.T) {
 }
 
 func TestKKK(t *testing.T) {
-	priv, _ := ToSM2(common.Hex2Bytes("39725efee3fb28614de3bacaffe4cc4bd8c436257e2c8bb887c4b5c4be45e76d")) //GenerateKey()
+	priv, _ := ToSM2(common.Hex2Bytes("9fd16a2008d879795506f46bb5e7c400ebf3108dc8c235318577b98894e15609")) //GenerateKey()
 	data := FromSM2(priv)
 	fmt.Println(hex.EncodeToString(data), PubkeyToAddress(priv.PublicKey))
+	fmt.Println(hex.EncodeToString(PubToUnCompressBytes(&priv.PublicKey)))
+	fmt.Println("=================")
 
 	pub := CompressPubkey(&priv.PublicKey)
-	desPub := DecompressPubkey(pub)
-	signer := PubkeyToAddress(*desPub)
-	fmt.Println(hex.EncodeToString(pub), signer)
+	desPub := sm2.Decompress(pub)
+	pubBytes := FromSM2Pub(desPub)
+	fmt.Println(hex.EncodeToString(pub), hex.EncodeToString(SM3(pubBytes[1:])))
+	signer := common.BytesToAddress(SM3(pubBytes[1:])[12:])
+	fmt.Println(hex.EncodeToString(pubBytes), signer)
+	fmt.Println("=================")
+
+	pk := common.Hex2Bytes("04c8a8d6b27c7ed2feed75cda7a1fd3ef082283d1f575b7df05b844fc2109fc35afaf519dff246175fb8813e6cb3f7d83153fda9d613d7c40c2009eacb0c01c01a")
+	up := UnCompressBytesToPub(pk)
+	cp := CompressPubkey(up)
+	ok := sm2.Decompress(cp)
+	addr := PubkeyToAddress(*ok)
+	fmt.Println(hex.EncodeToString(cp), addr)
+
+	//9fd16a2008d879795506f46bb5e7c400ebf3108dc8c235318577b98894e15609 0x89c2d721EEBf8d27D1a89ECD336064A81BfAefcF
+	//00c8a8d6b27c7ed2feed75cda7a1fd3ef082283d1f575b7df05b844fc2109fc35a 0x89c2d721EEBf8d27D1a89ECD336064A81BfAefcF
 }

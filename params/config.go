@@ -27,7 +27,7 @@ import (
 
 // Genesis hashes to enforce below configs on.
 var (
-	MainnetGenesisHash = common.HexToHash("0x9ba44faef7662ab6196316ab62a15384f2d5b5e946e3cc64c2550b41110cd140")
+	MainnetGenesisHash = common.HexToHash("0xb0c7b8cfcbf52433cf7ca846f776d10d14aa2e2936ab0ba7ce746f8ddaf3cb93")
 	RopstenGenesisHash = common.HexToHash("0x3f4322a156ff195d30ced89bd3271e7a583fba43965f93cb295875d731e1319b")
 	SepoliaGenesisHash = common.HexToHash("0x115ee383fa3e12acd77567f370864c2ffd37dd4f45d545e25eb69e89a62d08fb")
 	RinkebyGenesisHash = common.HexToHash("0xe06b7b0479532b7b65275a4191abe8ef29b35ff65325ac169524ea6eb7b6bae4")
@@ -79,7 +79,7 @@ var (
 		//Ethash:              new(EthashConfig),
 		Clique: &CliqueConfig{
 			Period: 2,
-			Epoch:  60,
+			Epoch:  10000,
 		},
 	}
 

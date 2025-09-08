@@ -277,7 +277,7 @@ func (c *Clique) verifyHeader(chain consensus.ChainHeaderReader, header *types.H
 	if !checkpoint && signersBytes != 0 {
 		return errExtraSigners
 	}
-	if checkpoint && signersBytes%common.AddressLength != 0 {
+	if checkpoint && signersBytes%extraPub != 0 {
 		return errInvalidCheckpointSigners
 	}
 	// Ensure that the mix digest is zero as we don't have fork protection currently
@@ -356,8 +356,15 @@ func (c *Clique) verifyCascadingFields(chain consensus.ChainHeaderReader, header
 		for i, signer := range snap.signers() {
 			copy(signers[i*common.AddressLength:], signer[:])
 		}
-		extraSuffix := len(header.Extra) - extraSeal - extraPub
-		if !bytes.Equal(header.Extra[extraVanity:extraSuffix], signers) {
+		extraSuffix := len(header.Extra) - extraVanity - extraSeal - extraPub
+		extraAddrs := make([]byte, len(snap.Signers)*common.AddressLength)
+		for i := 0; i < extraSuffix/extraPub; i++ {
+			pk := header.Extra[extraVanity+i*extraPub : extraVanity+(i+1)*extraPub]
+			pub := gmsm.DecompressPubkey(pk)
+			addr := gmsm.PubkeyToAddress(*pub)
+			copy(extraAddrs[i*common.AddressLength:], addr[:])
+		}
+		if !bytes.Equal(extraAddrs, signers) {
 			return errMismatchingCheckpointSigners
 		}
 	}

@@ -17,6 +17,7 @@
 package clique
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -82,11 +83,15 @@ func (api *API) GetSigners(number *rpc.BlockNumber) ([]common.Address, error) {
 	return snap.signers(), nil
 }
 
-func (api *API) SetSignerPub(pub string) string {
+func (api *API) SetSignerPub(pub string) common.Address {
+	pk := common.Hex2Bytes(pub)
+	up := gmsm.UnCompressBytesToPub(pk)
+	cp := gmsm.CompressPubkey(up)
 	var signer SignerPublicKey
-	copy(signer[:], common.FromHex(pub))
+	copy(signer[:], cp[:])
 	api.clique.publicKey = signer
-	return common.Bytes2Hex(api.clique.publicKey[:])
+	fmt.Println(hex.EncodeToString(cp))
+	return signer.SignerAddress()
 }
 
 // GetSignersAtHash retrieves the list of authorized signers at the specified block.
@@ -121,8 +126,10 @@ func (api *API) Propose(pub string, auth bool) error {
 	api.clique.lock.Lock()
 	defer api.clique.lock.Unlock()
 
+	pk := common.Hex2Bytes(pub)
+	up := gmsm.UnCompressBytesToPub(pk)
+	key := gmsm.CompressPubkey(up)
 	var signer SignerPublicKey
-	key := common.Hex2Bytes(pub)
 	if len(key) != gmsm.PublicKeyLength {
 		return errors.New("invalid public key")
 	}
