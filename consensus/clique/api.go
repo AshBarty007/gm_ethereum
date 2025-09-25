@@ -17,7 +17,6 @@
 package clique
 
 import (
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -90,7 +89,6 @@ func (api *API) SetSignerPub(pub string) common.Address {
 	var signer SignerPublicKey
 	copy(signer[:], cp[:])
 	api.clique.publicKey = signer
-	fmt.Println(hex.EncodeToString(cp))
 	return signer.SignerAddress()
 }
 

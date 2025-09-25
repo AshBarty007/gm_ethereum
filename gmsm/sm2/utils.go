@@ -6,6 +6,13 @@ import (
 )
 
 func Decompress(a []byte) *PublicKey {
+	//兼容用02和03判定奇偶性的公钥,可检测是否可行
+	if a[0]%2 == 1 {
+		a[0] = 1
+	} else {
+		a[0] = 0
+	}
+
 	var aa, xx, xx3 sm2P256FieldElement
 
 	P256Sm2()

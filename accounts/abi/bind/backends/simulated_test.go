@@ -1481,7 +1481,7 @@ func TestCallContract(t *testing.T) {
 	//addr = common.HexToAddress("0x1cCc0D653B8674b24E1413c6795F1456cD4841a9")
 	//no.2 step -> PendingCallContract
 	res, err := callContract(sim, ethereum.CallMsg{
-		From:      common.HexToAddress("0xa27CEF8aF2B6575903b676e5644657FAe96F491F"),
+		From:      testAddr,
 		To:        &addr,
 		Data:      common.Hex2Bytes("29e99f070000000000000000000000000000000000000000000000000000000000000002"),
 		GasFeeCap: new(big.Int),
