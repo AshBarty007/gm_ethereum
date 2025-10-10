@@ -74,6 +74,7 @@ func (priv *PrivateKey) Sign(random io.Reader, msg []byte, signer crypto.SignerO
 	//	b.AddASN1BigInt(r)
 	//	b.AddASN1BigInt(s)
 	//})
+	//return b.Bytes()
 
 	var rawSignature [64]byte
 	r.FillBytes(rawSignature[0:32])  // r 占用前32字节
@@ -198,6 +199,7 @@ func Sm2Verify(pub *PublicKey, msg, uid []byte, r, s *big.Int) bool {
 		return false
 	}
 	e, err := msgHash(za, msg)
+	//fmt.Println("e", e)
 	if err != nil {
 		return false
 	}
@@ -439,6 +441,7 @@ func msgHash(za, msg []byte) (*big.Int, error) {
 	e := sm3.New()
 	e.Write(za)
 	e.Write(msg)
+	//fmt.Println("msgHash", common.Bytes2Hex(e.Sum(nil)[:32]))
 	return new(big.Int).SetBytes(e.Sum(nil)[:32]), nil
 }
 

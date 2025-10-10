@@ -192,9 +192,8 @@ func (s londonSigner) Sender(tx *Transaction) (common.Address, error) {
 		return common.Address{}, ErrInvalidChainId
 	}
 
-	pub := tx.inner.getPublicKey()
-	pubKey := gmsm.DecompressPubkey(pub)
-	return gmsm.PubkeyToAddress(*pubKey), nil
+	hash := s.Hash(tx)
+	return ValidateTx(hash, tx)
 }
 
 func (s londonSigner) Equal(s2 Signer) bool {
@@ -275,9 +274,8 @@ func (s eip2930Signer) Sender(tx *Transaction) (common.Address, error) {
 		return common.Address{}, ErrInvalidChainId
 	}
 
-	pub := tx.inner.getPublicKey()
-	pubKey := gmsm.DecompressPubkey(pub)
-	return gmsm.PubkeyToAddress(*pubKey), nil
+	hash := s.Hash(tx)
+	return ValidateTx(hash, tx)
 }
 
 func (s eip2930Signer) SignatureValues(tx *Transaction, sig []byte) (R, S *big.Int, err error) {
@@ -372,9 +370,8 @@ func (s EIP155Signer) Sender(tx *Transaction) (common.Address, error) {
 		return common.Address{}, ErrInvalidChainId
 	}
 
-	pub := tx.inner.getPublicKey()
-	pubKey := gmsm.DecompressPubkey(pub)
-	return gmsm.PubkeyToAddress(*pubKey), nil
+	hash := s.Hash(tx)
+	return ValidateTx(hash, tx)
 }
 
 // SignatureValues returns signature values. This signature
@@ -429,9 +426,8 @@ func (hs HomesteadSigner) Sender(tx *Transaction) (common.Address, error) {
 		return common.Address{}, ErrTxTypeNotSupported
 	}
 
-	pub := tx.inner.getPublicKey()
-	pubKey := gmsm.DecompressPubkey(pub)
-	return gmsm.PubkeyToAddress(*pubKey), nil
+	hash := hs.Hash(tx)
+	return ValidateTx(hash, tx)
 }
 
 type FrontierSigner struct{}
@@ -450,9 +446,8 @@ func (fs FrontierSigner) Sender(tx *Transaction) (common.Address, error) {
 		return common.Address{}, ErrTxTypeNotSupported
 	}
 
-	pub := tx.inner.getPublicKey()
-	pubKey := gmsm.DecompressPubkey(pub)
-	return gmsm.PubkeyToAddress(*pubKey), nil
+	hash := fs.Hash(tx)
+	return ValidateTx(hash, tx)
 }
 
 // SignatureValues returns signature values. This signature
@@ -488,42 +483,30 @@ func decodeSignature(sig []byte) (r, s *big.Int) {
 	return r, s
 }
 
-//func recoverPlain(sighash common.Hash, R, S *big.Int, homestead bool) (common.Address, error) {
-//	//if Vb.BitLen() > 8 {
-//	//	return common.Address{}, ErrInvalidSig
-//	//}
-//	//V := byte(Vb.Uint64() - 27)
-//	if !gmsm.ValidateSignatureValues(R, S, homestead) {
-//		return common.Address{}, ErrInvalidSig
-//	}
-//	// encode the signature in uncompressed format
-//	r, s := R.Bytes(), S.Bytes()
-//	sig := make([]byte, gmsm.SignatureLength)
-//	copy(sig[32-len(r):32], r)
-//	copy(sig[64-len(s):64], s)
-//	//sig[64] = V
-//	// recover the public key from the signature
-//	pub, err := crypto.Ecrecover(sighash[:], sig)
-//	if err != nil {
-//		return common.Address{}, err
-//	}
-//	if len(pub) == 0 || pub[0] != 4 {
-//		return common.Address{}, errors.New("invalid public key")
-//	}
-//	var addr common.Address
-//	copy(addr[:], gmsm.SM3(pub[1:])[12:])
-//	return addr, nil
-//}
+func ValidateTx(msgHash common.Hash, tx *Transaction) (common.Address, error) {
+	//fmt.Println("msgHash", msgHash)
 
-// deriveChainId derives the chain id from the given v parameter
-func deriveChainId(v *big.Int) *big.Int {
-	if v.BitLen() <= 64 {
-		v := v.Uint64()
-		if v == 27 || v == 28 {
-			return new(big.Int)
-		}
-		return new(big.Int).SetUint64((v - 35) / 2)
+	R, S := tx.inner.rawSignatureValues()
+	//r, s := R.Bytes(), S.Bytes()
+	//sig := make([]byte, gmsm.SignatureLength)
+	//copy(sig[32-len(r):32], r)
+	//copy(sig[64-len(s):64], s)
+	//fmt.Println("sig", common.Bytes2Hex(sig))
+
+	pub := tx.PublicKey()
+	var publicKey *sm2.PublicKey
+	//fmt.Println("pub", common.Bytes2Hex(pub))
+
+	if len(pub) == 65 && pub[0] == 4 {
+		publicKey = gmsm.UnCompressBytesToPub(pub)
+	} else {
+		return common.Address{}, errors.New("invalid PublicKey")
 	}
-	v = new(big.Int).Sub(v, big.NewInt(35))
-	return v.Div(v, big.NewInt(2))
+
+	result := sm2.Sm2Verify(publicKey, msgHash[:], nil, R, S) //publicKey.Verify(msgHash[:], sig)
+	if !result {
+		return common.Address{}, errors.New("invalid Signature")
+	}
+
+	return gmsm.PubkeyToAddress(*publicKey), nil
 }

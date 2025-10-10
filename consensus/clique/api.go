@@ -20,12 +20,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/ethereum/go-ethereum/gmsm"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/gmsm"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/rpc"
 )
@@ -83,13 +82,18 @@ func (api *API) GetSigners(number *rpc.BlockNumber) ([]common.Address, error) {
 }
 
 func (api *API) SetSignerPub(pub string) common.Address {
-	pk := common.Hex2Bytes(pub)
-	up := gmsm.UnCompressBytesToPub(pk)
-	cp := gmsm.CompressPubkey(up)
+	pubkey := common.Hex2Bytes(pub)
 	var signer SignerPublicKey
-	copy(signer[:], cp[:])
-	api.clique.publicKey = signer
-	return signer.SignerAddress()
+
+	if len(pubkey) == 65 && pub[0] == 4 {
+		publicKey := gmsm.UnCompressBytesToPub(pubkey)
+		key := gmsm.CompressPubkey(publicKey)
+		copy(signer[:], key)
+		api.clique.publicKey = signer
+		return gmsm.PubkeyToAddress(*publicKey)
+	}
+
+	return common.Address{} // if error return nil address
 }
 
 // GetSignersAtHash retrieves the list of authorized signers at the specified block.
@@ -124,17 +128,19 @@ func (api *API) Propose(pub string, auth bool) error {
 	api.clique.lock.Lock()
 	defer api.clique.lock.Unlock()
 
-	pk := common.Hex2Bytes(pub)
-	up := gmsm.UnCompressBytesToPub(pk)
-	key := gmsm.CompressPubkey(up)
+	pubkey := common.Hex2Bytes(pub)
 	var signer SignerPublicKey
-	if len(key) != gmsm.PublicKeyLength {
-		return errors.New("invalid public key")
+
+	if len(pubkey) == 65 && pub[0] == 4 {
+		publicKey := gmsm.UnCompressBytesToPub(pubkey)
+		key := gmsm.CompressPubkey(publicKey)
+		copy(signer[:], key)
+		api.clique.proposals[signer] = auth
+		api.clique.publicKey = signer
+		return nil
 	}
-	copy(signer[:], key)
-	api.clique.proposals[signer] = auth
-	api.clique.publicKey = signer
-	return nil
+
+	return errors.New("invalid public key")
 }
 
 // Discard drops a currently running proposal, stopping the signer from casting

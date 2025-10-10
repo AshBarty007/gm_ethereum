@@ -1736,10 +1736,6 @@ func (s *TransactionAPI) SendRawTransaction(ctx context.Context, input hexutil.B
 		return common.Hash{}, err
 	}
 
-	if len(tx.PublicKey()) != gmsm.PublicKeyLength {
-		return common.Hash{}, errors.New("invalid public key")
-	}
-
 	return SubmitTransaction(ctx, s.b, tx)
 }
 

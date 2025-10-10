@@ -410,27 +410,58 @@ func TestRandomKey(t *testing.T) {
 }
 
 func TestKKK(t *testing.T) {
-	priv, _ := ToSM2(common.Hex2Bytes("9fd16a2008d879795506f46bb5e7c400ebf3108dc8c235318577b98894e15609")) //GenerateKey()
-	data := FromSM2(priv)
-	fmt.Println(hex.EncodeToString(data), PubkeyToAddress(priv.PublicKey))
-	fmt.Println(hex.EncodeToString(PubToUnCompressBytes(&priv.PublicKey)))
+	priv, _ := GenerateKey() //ToSM2(common.Hex2Bytes("ab63b23eb7941c1251757e24b3d2350d2bc05c3c388d06f8fe6feafefb1e8c70")) //
+	prik := FromSM2(priv)
+	fmt.Println("私钥，地址", hex.EncodeToString(prik), PubkeyToAddress(priv.PublicKey))
+	fmt.Println("公钥", hex.EncodeToString(PubToUnCompressBytes(&priv.PublicKey)))
 	fmt.Println("=================")
 
-	pub := CompressPubkey(&priv.PublicKey)
+	pub := CompressPubkey(&priv.PublicKey) //common.Hex2Bytes("0317287bbbab1a2ff9ea3f9340f1458676965a9c5a9bece4918731dca260cff273") //
 	desPub := sm2.Decompress(pub)
 	pubBytes := FromSM2Pub(desPub)
-	fmt.Println(hex.EncodeToString(pub), hex.EncodeToString(SM3(pubBytes[1:])))
+	fmt.Println("压缩公钥，全长地址：", hex.EncodeToString(pub), hex.EncodeToString(SM3(pubBytes[1:])))
 	signer := common.BytesToAddress(SM3(pubBytes[1:])[12:])
-	fmt.Println(hex.EncodeToString(pubBytes), signer)
+	fmt.Println("公钥，地址：", hex.EncodeToString(pubBytes), signer)
 	fmt.Println("=================")
 
-	pk := common.Hex2Bytes("04c8a8d6b27c7ed2feed75cda7a1fd3ef082283d1f575b7df05b844fc2109fc35afaf519dff246175fb8813e6cb3f7d83153fda9d613d7c40c2009eacb0c01c01a")
-	up := UnCompressBytesToPub(pk)
-	cp := CompressPubkey(up)
-	ok := sm2.Decompress(cp)
-	addr := PubkeyToAddress(*ok)
-	fmt.Println(hex.EncodeToString(cp), addr)
-
+	//私钥生成地址不匹配 异常公钥 js:02c8a8d6b27c7ed2feed75cda7a1fd3ef082283d1f575b7df05b844fc2109fc35a | go:00c8a8d6b27c7ed2feed75cda7a1fd3ef082283d1f575b7df05b844fc2109fc35a
 	//9fd16a2008d879795506f46bb5e7c400ebf3108dc8c235318577b98894e15609 0x89c2d721EEBf8d27D1a89ECD336064A81BfAefcF
-	//00c8a8d6b27c7ed2feed75cda7a1fd3ef082283d1f575b7df05b844fc2109fc35a 0x89c2d721EEBf8d27D1a89ECD336064A81BfAefcF
+	//私钥生成地址不匹配 异常公钥 js:03a245f017b60d7f476e51c6b273fce60600517a5582d7d5aac1d2109b184fdda2 | go:01a245f017b60d7f476e51c6b273fce60600517a5582d7d5aac1d2109b184fdda2
+	//53321db7c1e331d93a11a41d16f004d7ff63972ec8ec7c25db329728ceeb1710 0x3437A645B314eeeBF51E0267121dFC192a1c45df
+	//私钥生成地址不匹配 异常公钥 js:0317287bbbab1a2ff9ea3f9340f1458676965a9c5a9bece4918731dca260cff273 | go:0117287bbbab1a2ff9ea3f9340f1458676965a9c5a9bece4918731dca260cff273
+	//ab63b23eb7941c1251757e24b3d2350d2bc05c3c388d06f8fe6feafefb1e8c70 0x7f2976be25468e9368e4bcdfd97d9e2c18bde7a0
+}
+
+func TestSm2(t *testing.T) {
+	//Notify
+	default_uid := []byte("1234567812345678")
+	fmt.Println(common.Bytes2Hex(default_uid)) //31323334353637383132333435363738
+
+	message := []byte("hello")
+	fmt.Println("hash", message)
+
+	pri, _ := HexToSM2("9fd16a2008d879795506f46bb5e7c400ebf3108dc8c235318577b98894e15609")
+	fmt.Println("公钥", hex.EncodeToString(PubToUnCompressBytes(&pri.PublicKey)))
+	sig, _ := pri.Sign(rand.Reader, message, nil)
+
+	r, _ := big.NewInt(0).SetString("a562c37cd01f0e1ed6eaecfb8be371c41930f710ceff3a9743e9dd25c3350ac9", 16)
+	s, _ := big.NewInt(0).SetString("25c2f2f2958dd511c6720caee4a88439597dca7b63f005919030c4934246f2a6", 16)
+	//sig := common.Hex2Bytes("59f0336fde58a64a6b05d2cb1f2015ae78c912a76ef497eb22a4f6ec5280c5fcf0642c4f370afa5b82f8415a3351ab7807cf3e5cfcd38c41f4325a7612313e69")
+	fmt.Println("sig", common.Bytes2Hex(sig))
+
+	result := sm2.Sm2Verify(&pri.PublicKey, message, default_uid, r, s)
+	fmt.Println(result) //false
+}
+
+func TestK(t *testing.T) {
+	priv, _ := HexToSM2("9fd16a2008d879795506f46bb5e7c400ebf3108dc8c235318577b98894e15609")
+	pub := &priv.PublicKey
+	fmt.Println("pub", common.Bytes2Hex(FromSM2Pub(pub)))
+	msg := []byte("123456")
+	d0, err := pub.EncryptAsn1(msg, rand.Reader)
+	if err != nil {
+		fmt.Printf("Error: failed to encrypt %s: %v\n", msg, err)
+		return
+	}
+	fmt.Println(hex.EncodeToString(d0))
 }

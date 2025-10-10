@@ -263,8 +263,6 @@ func Sign(digestHash []byte, prv *sm2.PrivateKey) (sig []byte, err error) {
 	if len(digestHash) != DigestLength {
 		return nil, fmt.Errorf("hash is required to be exactly %d bytes (%d)", DigestLength, len(digestHash))
 	}
-	seckey := math.PaddedBigBytes(prv.D, prv.Params().BitSize/8)
-	defer zeroBytes(seckey)
 	return prv.Sign(rand.Reader, digestHash, nil)
 }
 
