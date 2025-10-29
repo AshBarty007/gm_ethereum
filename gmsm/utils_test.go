@@ -454,14 +454,25 @@ func TestSm2(t *testing.T) {
 }
 
 func TestK(t *testing.T) {
-	priv, _ := HexToSM2("9fd16a2008d879795506f46bb5e7c400ebf3108dc8c235318577b98894e15609")
-	pub := &priv.PublicKey
-	fmt.Println("pub", common.Bytes2Hex(FromSM2Pub(pub)))
-	msg := []byte("123456")
-	d0, err := pub.EncryptAsn1(msg, rand.Reader)
-	if err != nil {
-		fmt.Printf("Error: failed to encrypt %s: %v\n", msg, err)
-		return
+	//priv, _ := HexToSM2("9fd16a2008d879795506f46bb5e7c400ebf3108dc8c235318577b98894e15609")
+	//pub := &priv.PublicKey
+	//fmt.Println("pub", common.Bytes2Hex(FromSM2Pub(pub)))
+	//msg := []byte("123456")
+	//d0, err := pub.EncryptAsn1(msg, rand.Reader)
+	//if err != nil {
+	//	fmt.Printf("Error: failed to encrypt %s: %v\n", msg, err)
+	//	return
+	//}
+	//fmt.Println(hex.EncodeToString(d0))
+
+	pub := "04b0754728940151dc5bee4f5c10c5b893a09a33b26068962f2aac92f02869a9bc4c5f8a3d23b10a002405ee0f59c6b0635362825541b0654e1d83ed5c0c183367"
+	pubkey := common.Hex2Bytes(pub)
+	if len(pubkey) == 65 && pubkey[0] == 4 {
+		publicKey := UnCompressBytesToPub(pubkey)
+		addr := PubkeyToAddress(*publicKey)
+		fmt.Println(addr)
+	} else {
+		fmt.Println("error")
 	}
-	fmt.Println(hex.EncodeToString(d0))
+
 }

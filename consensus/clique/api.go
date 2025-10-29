@@ -85,7 +85,7 @@ func (api *API) SetSignerPub(pub string) common.Address {
 	pubkey := common.Hex2Bytes(pub)
 	var signer SignerPublicKey
 
-	if len(pubkey) == 65 && pub[0] == 4 {
+	if len(pubkey) == 65 && pubkey[0] == 4 {
 		publicKey := gmsm.UnCompressBytesToPub(pubkey)
 		key := gmsm.CompressPubkey(publicKey)
 		copy(signer[:], key)
@@ -131,7 +131,7 @@ func (api *API) Propose(pub string, auth bool) error {
 	pubkey := common.Hex2Bytes(pub)
 	var signer SignerPublicKey
 
-	if len(pubkey) == 65 && pub[0] == 4 {
+	if len(pubkey) == 65 && pubkey[0] == 4 {
 		publicKey := gmsm.UnCompressBytesToPub(pubkey)
 		key := gmsm.CompressPubkey(publicKey)
 		copy(signer[:], key)
