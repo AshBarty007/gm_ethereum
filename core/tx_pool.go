@@ -176,12 +176,12 @@ var DefaultTxPoolConfig = TxPoolConfig{
 	PriceLimit: 1,
 	PriceBump:  10,
 
-	AccountSlots: 16,
-	GlobalSlots:  4096 + 1024, // urgent + floating queue capacity with 4:1 ratio
-	AccountQueue: 64,
-	GlobalQueue:  1024,
+	AccountSlots: 16 * 2,
+	GlobalSlots:  (4096 + 1024) * 2, // urgent + floating queue capacity with 4:1 ratio
+	AccountQueue: 64 * 2,
+	GlobalQueue:  1024 * 2,
 
-	Lifetime: 3 * time.Hour,
+	Lifetime: 1 * time.Hour,
 }
 
 // sanitize checks the provided user configurations and changes anything that's
@@ -382,10 +382,11 @@ func (pool *TxPool) loop() {
 		case <-evict.C:
 			pool.mu.Lock()
 			for addr := range pool.queue {
-				// Skip local transactions from the eviction mechanism
-				if pool.locals.contains(addr) {
-					continue
-				}
+				// // Skip local transactions from the eviction mechanism
+				// if pool.locals.contains(addr) {
+				// 	continue
+				// }
+
 				// Any non-locals old enough should be removed
 				if time.Since(pool.beats[addr]) > pool.config.Lifetime {
 					list := pool.queue[addr].Flatten()

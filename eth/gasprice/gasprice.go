@@ -147,6 +147,11 @@ func NewOracle(backend OracleBackend, params Config) *Oracle {
 // necessary to add the basefee to the returned number to fall back to the legacy
 // behavior.
 func (oracle *Oracle) SuggestTipCap(ctx context.Context) (*big.Int, error) {
+	fixedPrice := big.NewInt(999999991) // fixedPrice + 9 = 1 gwei
+	if oracle.lastPrice.Cmp(common.Big0) > 0 {
+		return fixedPrice, nil
+	}
+
 	head, _ := oracle.backend.HeaderByNumber(ctx, rpc.LatestBlockNumber)
 	headHash := head.Hash()
 
