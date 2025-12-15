@@ -85,9 +85,9 @@ var Defaults = Config{
 	SnapshotCache:           102 * 2,
 	FilterLogCacheSize:      32,
 	Miner: miner.Config{
-		GasCeil:  200000000,
+		GasCeil:  100000000,
 		GasPrice: big.NewInt(params.GWei),
-		Recommit: 2 * time.Second,
+		Recommit: 3 * time.Second,
 	},
 	TxPool:        core.DefaultTxPoolConfig,
 	RPCGasCap:     50000000,
