@@ -22,6 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/ethereum/go-ethereum/gmsm"
+	"github.com/ethereum/go-ethereum/gmsm/sm2"
 	"github.com/ethereum/go-ethereum/gmsm/sm3"
 	"io"
 	"math/big"
@@ -728,6 +729,11 @@ func (c *Clique) APIs(chain consensus.ChainHeaderReader) []rpc.API {
 		Namespace: "clique",
 		Service:   &API{chain: chain, clique: c},
 	}}
+}
+
+func (c *Clique) SetSealer(key *sm2.PublicKey) {
+	compressKey := gmsm.CompressPubkey(key)
+	c.publicKey = SignerPublicKey(compressKey)
 }
 
 // SealHash returns the hash of a block prior to it being sealed.

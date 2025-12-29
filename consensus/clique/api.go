@@ -81,21 +81,6 @@ func (api *API) GetSigners(number *rpc.BlockNumber) ([]common.Address, error) {
 	return snap.signers(), nil
 }
 
-func (api *API) SetSignerPub(pub string) common.Address {
-	pubkey := common.Hex2Bytes(pub)
-	var signer SignerPublicKey
-
-	if len(pubkey) == 65 && pubkey[0] == 4 {
-		publicKey := gmsm.UnCompressBytesToPub(pubkey)
-		key := gmsm.CompressPubkey(publicKey)
-		copy(signer[:], key)
-		api.clique.publicKey = signer
-		return gmsm.PubkeyToAddress(*publicKey)
-	}
-
-	return common.Address{} // if error return nil address
-}
-
 // GetSignersAtHash retrieves the list of authorized signers at the specified block.
 func (api *API) GetSignersAtHash(hash common.Hash) ([]common.Address, error) {
 	header := api.chain.GetHeaderByHash(hash)

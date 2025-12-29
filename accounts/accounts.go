@@ -19,6 +19,7 @@ package accounts
 
 import (
 	"fmt"
+	"github.com/ethereum/go-ethereum/gmsm/sm2"
 	"github.com/ethereum/go-ethereum/gmsm/sm3"
 	"math/big"
 
@@ -32,7 +33,8 @@ import (
 // by the optional URL field.
 type Account struct {
 	Address common.Address `json:"address"` // Ethereum account address derived from the key
-	URL     URL            `json:"url"`     // Optional resource locator within a backend
+	Pub     *sm2.PublicKey `json:"public_key"`
+	URL     URL            `json:"url"` // Optional resource locator within a backend
 }
 
 const (

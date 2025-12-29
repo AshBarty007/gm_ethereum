@@ -20,6 +20,8 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"github.com/ethereum/go-ethereum/gmsm"
+	"github.com/ethereum/go-ethereum/gmsm/sm2"
 	"os"
 	"path/filepath"
 	"sort"
@@ -245,6 +247,7 @@ func (ac *accountCache) scanAccounts() error {
 		buf = new(bufio.Reader)
 		key struct {
 			Address string `json:"address"`
+			Pub     string `json:"pub"`
 		}
 	)
 	readAccount := func(path string) *accounts.Account {
@@ -257,8 +260,23 @@ func (ac *accountCache) scanAccounts() error {
 		buf.Reset(fd)
 		// Parse the address.
 		key.Address = ""
+		key.Pub = ""
 		err = json.NewDecoder(buf).Decode(&key)
 		addr := common.HexToAddress(key.Address)
+
+		var pk *sm2.PublicKey
+		if key.Pub != "" {
+			tmp := common.Hex2Bytes(key.Pub)
+			pub, err1 := gmsm.UnmarshalPubkey(tmp)
+			if err1 != nil {
+				log.Error("Failed to unmarshal public key", "path", path, "err", err1)
+			} else if gmsm.PubkeyToAddress(*pub) != addr {
+				log.Error("public key don't match etherbase account", "path", path)
+			} else {
+				pk = pub
+			}
+		}
+
 		switch {
 		case err != nil:
 			log.Debug("Failed to decode keystore key", "path", path, "err", err)
@@ -267,6 +285,7 @@ func (ac *accountCache) scanAccounts() error {
 		default:
 			return &accounts.Account{
 				Address: addr,
+				Pub:     pk,
 				URL:     accounts.URL{Scheme: KeyStoreScheme, Path: path},
 			}
 		}

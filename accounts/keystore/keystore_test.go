@@ -19,10 +19,8 @@ package keystore
 import (
 	"fmt"
 	"github.com/ethereum/go-ethereum/gmsm"
-	"io/ioutil"
 	"math/rand"
 	"os"
-	"path/filepath"
 	"runtime"
 	"sort"
 	"strings"
@@ -458,45 +456,48 @@ func tmpKeyStore(t *testing.T, encrypted bool) (string, *KeyStore) {
 }
 
 func TestExportKey(t *testing.T) {
-	ksDir := "C:\\Users\\Administrator\\Desktop\\gm_ethereum\\datadir\\keystore"
-	password := ""
-
-	files, err := ioutil.ReadDir(ksDir)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	fmt.Printf("%-48s %-70s %-66s %s\n", "地址", "私钥", "公钥(0x04...)", "文件名")
-	fmt.Printf("%s\n", strings.Repeat("-", 200))
-
-	for _, f := range files {
-		if !strings.HasPrefix(f.Name(), "UTC--") {
-			continue
-		}
-		path := filepath.Join(ksDir, f.Name())
-
-		data, err := ioutil.ReadFile(path)
-		if err != nil {
-			fmt.Printf("读取失败 %s: %v\n", f.Name(), err)
-			continue
-		}
-
-		var key *Key
-		key, err = DecryptKey(data, password)
-		if err != nil {
-			fmt.Printf("解密失败 %s: %v\n", f.Name(), err)
-			continue
-		}
-
-		//privHex, pubHex, addr := privateKeyToHex(key.PrivateKey)
-		privHex := common.Bytes2Hex(gmsm.FromSM2(key.PrivateKey))
-		pubHex := common.Bytes2Hex(gmsm.FromSM2Pub(&key.PrivateKey.PublicKey))
-
-		fmt.Printf("%-48s %-70s %-66s %s\n",
-			key.Address,
-			"0x"+privHex,
-			pubHex,
-			f.Name(),
-		)
-	}
+	var pub []byte
+	a, err := gmsm.UnmarshalPubkey(pub)
+	fmt.Println(a, err)
+	//ksDir := "..\\..\\datadir\\keystore"
+	//password := ""
+	//
+	//files, err := ioutil.ReadDir(ksDir)
+	//if err != nil {
+	//	t.Fatal(err)
+	//}
+	//
+	//fmt.Printf("%-41s %-69s %-128s %s\n", "地址", "私钥", "公钥(0x04...)", "文件名")
+	//fmt.Printf("%s\n", strings.Repeat("--", 161))
+	//
+	//for _, f := range files {
+	//	if !strings.HasPrefix(f.Name(), "UTC--") {
+	//		continue
+	//	}
+	//	path := filepath.Join(ksDir, f.Name())
+	//
+	//	data, err := ioutil.ReadFile(path)
+	//	if err != nil {
+	//		fmt.Printf("读取失败 %s: %v\n", f.Name(), err)
+	//		continue
+	//	}
+	//
+	//	var key *Key
+	//	key, err = DecryptKey(data, password)
+	//	if err != nil {
+	//		fmt.Printf("解密失败 %s: %v\n", f.Name(), err)
+	//		continue
+	//	}
+	//
+	//	//privHex, pubHex, addr := privateKeyToHex(key.PrivateKey)
+	//	privHex := common.Bytes2Hex(gmsm.FromSM2(key.PrivateKey))
+	//	pubHex := common.Bytes2Hex(gmsm.FromSM2Pub(&key.PrivateKey.PublicKey))
+	//
+	//	fmt.Printf("%-48s %-70s %-66s %s\n",
+	//		key.Address,
+	//		"0x"+privHex,
+	//		pubHex,
+	//		f.Name(),
+	//	)
+	//}
 }

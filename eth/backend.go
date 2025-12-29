@@ -460,6 +460,13 @@ func (s *Ethereum) StartMining(threads int) error {
 				return fmt.Errorf("signer missing: %v", err)
 			}
 			cli.Authorize(eb, wallet.SignData)
+
+			
+			if len(wallet.Accounts()) > 0 && wallet.Accounts()[0].Pub != nil {
+				cli.SetSealer(wallet.Accounts()[0].Pub)
+			} else {
+				return fmt.Errorf("etherbase publicKey unavailable or miss")
+			}
 		}
 		// If mining is started, we can disable the transaction rejection mechanism
 		// introduced to speed sync times.
