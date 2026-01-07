@@ -1600,37 +1600,45 @@ func (bc *BlockChain) insertChain(chain types.Blocks, verifySeals, setHead bool)
 		// its header and body was already in the database). But if the corresponding
 		// snapshot layer is missing, forcibly rerun the execution to build it.
 		if bc.skipBlock(err, it) {
-			logger := log.Debug
-			if bc.chainConfig.Clique == nil {
-				logger = log.Warn
-			}
-			logger("Inserted known block", "number", block.Number(), "hash", block.Hash(),
-				"uncles", len(block.Uncles()), "txs", len(block.Transactions()), "gas", block.GasUsed(),
-				"root", block.Root())
-
-			// Special case. Commit the empty receipt slice if we meet the known
-			// block in the middle. It can only happen in the clique chain. Whenever
-			// we insert blocks via `insertSideChain`, we only commit `td`, `header`
-			// and `body` if it's non-existent. Since we don't have receipts without
-			// reexecution, so nothing to commit. But if the sidechain will be adopted
-			// as the canonical chain eventually, it needs to be reexecuted for missing
-			// state, but if it's this special case here(skip reexecution) we will lose
-			// the empty receipt entry.
-			if len(block.Transactions()) == 0 {
-				rawdb.WriteReceipts(bc.db, block.Hash(), block.NumberU64(), nil)
+			// Check if the block has transactions and receipts
+			// If it has transactions but no receipts, we need to re-execute to generate receipts
+			hasReceipts := rawdb.HasReceipts(bc.db, block.Hash(), block.NumberU64())
+			if len(block.Transactions()) > 0 && !hasReceipts {
+				// Block has transactions but no receipts, force re-execution
+				log.Debug("Known block has transactions but missing receipts, re-executing",
+					"number", block.Number(), "hash", block.Hash())
+				// Fall through to normal execution path
 			} else {
-				log.Error("Please file an issue, skip known block execution without receipt",
-					"hash", block.Hash(), "number", block.NumberU64())
-			}
-			if err := bc.writeKnownBlock(block); err != nil {
-				return it.index, err
-			}
-			stats.processed++
+				// Block can be skipped safely
+				logger := log.Debug
+				if bc.chainConfig.Clique == nil {
+					logger = log.Warn
+				}
+				logger("Inserted known block", "number", block.Number(), "hash", block.Hash(),
+					"uncles", len(block.Uncles()), "txs", len(block.Transactions()), "gas", block.GasUsed(),
+					"root", block.Root())
 
-			// We can assume that logs are empty here, since the only way for consecutive
-			// Clique blocks to have the same state is if there are no transactions.
-			lastCanon = block
-			continue
+				// Special case. Commit the empty receipt slice if we meet the known
+				// block in the middle. It can only happen in the clique chain. Whenever
+				// we insert blocks via `insertSideChain`, we only commit `td`, `header`
+				// and `body` if it's non-existent. Since we don't have receipts without
+				// reexecution, so nothing to commit. But if the sidechain will be adopted
+				// as the canonical chain eventually, it needs to be reexecuted for missing
+				// state, but if it's this special case here(skip reexecution) we will lose
+				// the empty receipt entry.
+				if len(block.Transactions()) == 0 {
+					rawdb.WriteReceipts(bc.db, block.Hash(), block.NumberU64(), nil)
+				}
+				if err := bc.writeKnownBlock(block); err != nil {
+					return it.index, err
+				}
+				stats.processed++
+
+				// We can assume that logs are empty here, since the only way for consecutive
+				// Clique blocks to have the same state is if there are no transactions.
+				lastCanon = block
+				continue
+			}
 		}
 
 		// Retrieve the parent block and it's state to execute on top

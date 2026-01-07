@@ -565,6 +565,12 @@ web3._extend({
 			inputFormatter: [null, function (val) { return !!val; }]
 		}),
 		new web3._extend.Method({
+			name: 'getBlockReceipts',
+			call: 'eth_getBlockReceipts',
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
+		}),
+		new web3._extend.Method({
 			name: 'getRawTransaction',
 			call: 'eth_getRawTransactionByHash',
 			params: 1
