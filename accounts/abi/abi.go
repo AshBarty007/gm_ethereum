@@ -21,8 +21,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/ethereum/go-ethereum/gmsm"
 	"io"
+
+	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/ethereum/go-ethereum/common"
 )
@@ -233,7 +234,7 @@ func (abi *ABI) HasReceive() bool {
 }
 
 // revertSelector is a special function selector for revert reason unpacking.
-var revertSelector = gmsm.SM3([]byte("Error(string)"))[:4]
+var revertSelector = crypto.Keccak256([]byte("Error(string)"))[:4]
 
 // UnpackRevert resolves the abi-encoded revert reason. According to the solidity
 // spec https://solidity.readthedocs.io/en/latest/control-structures.html#revert,

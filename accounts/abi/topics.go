@@ -20,9 +20,10 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"github.com/ethereum/go-ethereum/gmsm"
 	"math/big"
 	"reflect"
+
+	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/ethereum/go-ethereum/common"
 )
@@ -68,10 +69,10 @@ func MakeTopics(query ...[]interface{}) ([][]common.Hash, error) {
 				blob := new(big.Int).SetUint64(rule).Bytes()
 				copy(topic[common.HashLength-len(blob):], blob)
 			case string:
-				hash := gmsm.SM3Hash([]byte(rule))
+				hash := crypto.Keccak256Hash([]byte(rule))
 				copy(topic[:], hash[:])
 			case []byte:
-				hash := gmsm.SM3Hash(rule)
+				hash := crypto.Keccak256Hash(rule)
 				copy(topic[:], hash[:])
 
 			default:
